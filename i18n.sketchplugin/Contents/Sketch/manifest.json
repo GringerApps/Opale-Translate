@@ -1,0 +1,22 @@
+{
+  "name" : "I18n",
+  "identifier" : "com.gringer.sketch.i18n",
+  "version" : "0.1",
+  "description" : "Translate your sketchs",
+  "author" : "Yohan Robert",
+  "homepage": "https://github.com/GringerApps/sketch-i18n",
+  "commands" : [
+    {
+      "name": "using go_i18n format",
+      "identifier": "translateFromJSONGo",
+      "script": "plugin.cocoascript",
+      "handler": "translateFromJSONGo"
+    }
+  ],
+  "menu": {
+    "title": "Translate selection",
+    "items": [
+      "translateFromJSONGo"
+    ]
+  }
+}
