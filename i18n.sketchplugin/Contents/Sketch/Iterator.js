@@ -10,7 +10,7 @@ var ArrayWrapper = function (array) {
   };
 };
 
-Iterator = function (list) {
+var Iterator = function (list) {
   if (list.length === undefined) {
     list = [list];
   }
@@ -80,4 +80,6 @@ Iterator = function (list) {
     count: count,
     length: length
   };
-}
+};
+
+module.exports = Iterator;

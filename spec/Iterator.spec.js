@@ -1,5 +1,5 @@
 describe("Player", function() {
-  require('../i18n.sketchplugin/Contents/Sketch/Iterator');
+  var Iterator = require('../i18n.sketchplugin/Contents/Sketch/Iterator');
 
   var iterator;
   var textLayer;

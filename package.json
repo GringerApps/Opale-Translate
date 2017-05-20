@@ -4,8 +4,23 @@
   "author": "Yohan Robert",
   "license": "MIT",
   "description": "i18n plugin for Sketch",
-  "scripts": { "test": "jasmine" },
+  "scripts": {
+    "test": "jasmine",
+    "build": "gulp build",
+    "watch": "gulp watch"
+  },
   "devDependencies": {
+    "browserify": "^14.3.0",
+    "gulp": "^3.9.1",
+    "gulp-browserify": "^0.5.1",
+    "gulp-jasmine": "^2.4.2",
+    "gulp-jasmine-node": "^1.0.7",
+    "gulp-run": "^1.7.1",
+    "gulp-watch": "^4.3.11",
     "jasmine": "^2.6.0"
+  },
+  "dependencies": {
+    "text-encoding": "^0.6.4",
+    "xlsx": "^0.10.3"
   }
 }
