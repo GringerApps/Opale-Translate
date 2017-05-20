@@ -1,4 +1,5 @@
-@import "Iterator.js"
+var Iterator = require("./Iterator");
+var { I18nGoParser, ExcelParser } = require("./Parser");
 
 var CONSTANTS = {
   TITLE: "Sketch i18n",
@@ -9,7 +10,7 @@ var CONSTANTS = {
   }
 };
 
-var translate = function (context, callback) {
+var translate = function (context, parser) {
   var ALERT = new AlertWindow(CONSTANTS.TITLE);
   var selectedLayers = context.api().selectedDocument.selectedLayers;
   var selection = new Iterator(selectedLayers);
@@ -34,9 +35,9 @@ var translate = function (context, callback) {
     ALERT.show(CONSTANTS.MESSAGES.NO_FILE_SELECTED);
     return;
   }
-  var content = fileReader.read();
+  var content = fileReader.read(parser.encoding);
 
-  var translatedContent = callback(content);
+  var translatedContent = parser.parse(content);
 
   artboards.forEach(function (layer) {
     for (var key in translatedContent) {
@@ -75,7 +76,11 @@ var FilePicker = function () {
     return modelResult == NSOKButton && panel.filenames().length != 0;
   };
 
-  var read = function () {
+  var read = function (encoding) {
+    if (encoding === undefined) {
+      encoding = NSUTF8StringEncoding;
+    }
+
     var result = {};
     if (!choseFiles()) {
       return result;
@@ -83,7 +88,8 @@ var FilePicker = function () {
     var filenames = panel.filenames();
     for (i = 0; i < filenames.length; i++) {
       var fullpath = filenames[i];
-      var content = NSString.stringWithContentsOfFile(fullpath);
+
+      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
       var filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
       result[filename] = content;
     }
@@ -113,18 +119,10 @@ var AlertWindow = function (title) {
   };
 };
 
-var translateFromJSONGo = function (context) {
-  translate(context, function (content) {
-    var result = {}
-    for (var key in content) {
-      var translations = JSON.parse(content[key]);
-      var mappedTranslations = {};
-      for (var i = 0; i < translations.length; i++) {
-        var translation = translations[i];
-        mappedTranslations[translation.id] = translation.translation;
-      }
-      result[key] = mappedTranslations;
-    }
-    return result;
-  });
+translateFromJSONGo = function (context) {
+  translate(context, new I18nGoParser());
+};
+
+translateFromExcel = function (context) {
+  translate(context, new ExcelParser());
 };

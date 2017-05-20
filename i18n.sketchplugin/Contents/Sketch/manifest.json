@@ -5,18 +5,26 @@
   "description" : "Translate your sketchs",
   "author" : "Yohan Robert",
   "homepage": "https://github.com/gringer/i18n",
+  "disableCocoaScriptPreprocessor": true,
   "commands" : [
     {
       "name": "using go_i18n format",
       "identifier": "translateFromJSONGo",
-      "script": "plugin.cocoascript",
+      "script": "build/plugin.js",
       "handler": "translateFromJSONGo"
+    },
+    {
+      "name": "using excel format",
+      "identifier": "translateFromExcel",
+      "script": "build/plugin.js",
+      "handler": "translateFromExcel"
     }
   ],
   "menu": {
     "title": "Translate selection",
     "items": [
-      "translateFromJSONGo"
+      "translateFromJSONGo",
+      "translateFromExcel"
     ]
   }
 }
