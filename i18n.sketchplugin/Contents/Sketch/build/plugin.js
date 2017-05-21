@@ -1,167 +1,233 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var ArrayWrapper = function (array) {
-  var iterate = function (callback) {
-    for (var i = 0; i < array.length; i++) {
-      callback(array[i]);
+class AlertWindow {
+  constructor(title) {
+    const window = COSAlertWindow.new();
+
+    window.setMessageText(title);
+    window.addButtonWithTitle("OK");
+
+    this.window = window;
+  }
+
+  show(message) {
+    this.window.setInformativeText(message);
+    this.window.runModal();
+  }
+}
+
+module.exports = AlertWindow;
+
+},{}],2:[function(require,module,exports){
+class FilePicker {
+  constructor() {
+    const panel = NSOpenPanel.openPanel();
+    panel.setCanChooseFiles(true);
+    panel.setCanChooseDirectories(false);
+    panel.setAllowsMultipleSelection(true);
+
+    this.panel = panel;
+    this.modalResult = NSFileHandlingPanelCancelButton;
+  }
+
+  show() {
+    this.modalResult = this.panel.runModal();
+  };
+
+  choseFiles() {
+    return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
+  };
+
+  read(encoding) {
+    if (encoding === undefined) {
+      encoding = NSUTF8StringEncoding;
+    }
+
+    const result = {};
+    if (!this.choseFiles()) {
+      return result;
+    }
+    const filenames = this.panel.filenames();
+    for (let i = 0; i < filenames.length; i++) {
+      const fullpath = filenames[i];
+
+      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
+      const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
+      result[filename] = content;
+    }
+    return result;
+  }
+}
+
+module.exports = FilePicker;
+
+},{}],3:[function(require,module,exports){
+class ArrayWrapper {
+  constructor(array) {
+    this.array = array;
+  }
+
+  get length() {
+    return this.array.length;
+  }
+
+  iterate(callback) {
+    for (let i = 0; i < this.length; i++) {
+      callback(this.array[i]);
     }
   }
-  return {
-    iterate: iterate,
-    length: array.length
-  };
 };
 
-var Iterator = function (list) {
-  if (list.length === undefined) {
-    list = [list];
-  }
-  if (list.constructor === Array) {
-    list = new ArrayWrapper(list);
+class Iterator {
+  constructor(list) {
+    if (list.length === undefined) {
+      list = [list];
+    }
+    if (list.constructor === Array) {
+      list = new ArrayWrapper(list);
+    }
+    this.list = list;
+    this.length = list.length;
   }
 
-  var iterateOnLayer = function (layer, callback) {
+  _iterateOnLayer(layer, callback) {
     callback(layer);
     if (layer.isGroup) {
+      const self = this;
       layer.iterate(function (sublayer) {
-        iterateOnLayer(sublayer, callback);
+        self._iterateOnLayer(sublayer, callback);
       });
     }
-  };
+  }
 
-  var iterate = function (callback, deep) {
-    list.iterate(function (layer) {
+  iterate(callback, deep) {
+    const self = this;
+    this.list.iterate(function (layer) {
       if (deep) {
-        iterateOnLayer(layer, callback);
+        self._iterateOnLayer(layer, callback);
       } else {
         callback(layer);
       }
     });
   }
-  var forEach = function (callback, deep) {
-   iterate(callback, deep);
-  };
 
-  var filter = function (predicate, deep) {
-    var result = [];
-    iterate(function (layer) {
+  forEach(callback, deep) {
+    this.iterate(callback, deep);
+  }
+
+  filter(predicate, deep) {
+    const result = [];
+    this.iterate((layer) => {
       if (predicate(layer)) {
         result.push(layer);
       }
     }, deep);
     return new Iterator(result);
-  };
+  }
 
-  var map = function (callback, deep) {
-    var result = [];
-    iterate(function (layer) {
+  map(callback, deep) {
+    const result = [];
+    this.iterate((layer) => {
       result.push(callback(layer));
     }, deep);
     return result;
-  };
+  }
 
-  var toArray = function (deep) {
-    var result = [];
-    iterate(function (layer) {
+  toArray(deep) {
+    const result = [];
+    this.iterate((layer) => {
       result.push(layer);
     }, deep)
     return result;
   }
 
-  var count = function () {
-    return list.length;
-  };
-
-  var length = list.length;
-
-  return {
-    toArray: toArray,
-    forEach: forEach,
-    filter: filter,
-    map: map,
-    count: count,
-    length: length
-  };
-};
+  count() {
+    return this.list.length;
+  }
+}
 
 module.exports = Iterator;
 
-},{}],2:[function(require,module,exports){
-var XLSX = require("xlsx");
-var { TextEncoder } = require("text-encoding");
+},{}],4:[function(require,module,exports){
+const XLSX = require("xlsx");
+const { TextEncoder } = require("text-encoding");
 
-var I18nGoParser = function() {
-  var parse = function (content) {
-    var result = {}
-    for (var key in content) {
-      var translations = JSON.parse(content[key]);
-      var mappedTranslations = {};
-      for (var i = 0; i < translations.length; i++) {
-        var translation = translations[i];
+class I18nGoParser {
+  get encoding() {
+    return NSUTF8StringEncoding;
+  }
+
+  parse(content) {
+    const result = {};
+    for (let key in content) {
+      const translations = JSON.parse(content[key]);
+      const mappedTranslations = {};
+      for (let i = 0; i < translations.length; i++) {
+        const translation = translations[i];
         mappedTranslations[translation.id] = translation.translation;
       }
       result[key] = mappedTranslations;
     }
     return result;
-  };
+  }
+}
 
-  return {
-    encoding: NSUTF8StringEncoding,
-    parse: parse
-  };
-};
+class ExcelParser {
+  get encoding() {
+    return NSISOLatin1StringEncoding;
+  }
 
-var ExcelParser = function () {
-  var parse = function (content) {
-    var result = {}
-    for (var key in content) {
-      var fileContent = String(content[key]);
-      var workbook = XLSX.read(fileContent, { type: "binary" });
-      var sheetName = workbook.SheetNames[0];
-      var sheet = workbook.Sheets[sheetName];
-      var translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      var headers = translations[0];
-      for (var i = 1; i < headers.length; i++) {
-        var language = headers[i];
+  parse(content) {
+    const result = {}
+    for (let key in content) {
+      const fileContent = String(content[key]);
+      const workbook = XLSX.read(fileContent, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const headers = translations[0];
+      for (let i = 1; i < headers.length; i++) {
+        const language = headers[i];
         result[language] = {};
       }
-      for (var i = 1; i < translations.length; i++) {
-        var mapping = translations[i];
-        for (var j = 1; j < mapping.length; j++) {
-          var language = headers[j];
-          var key = mapping[0];
-          var translation = mapping[j];
+      for (let i = 1; i < translations.length; i++) {
+        const mapping = translations[i];
+        for (let j = 1; j < mapping.length; j++) {
+          const language = headers[j];
+          const key = mapping[0];
+          const translation = mapping[j];
           result[language][key] = translation;
         }
       }
     }
     return result;
-  };
-
-  return {
-    encoding: NSISOLatin1StringEncoding,
-    parse: parse
-  };
-};
-
-module.exports = {
-  I18nGoParser: I18nGoParser,
-  ExcelParser: ExcelParser
+  }
 }
 
-},{"text-encoding":9,"xlsx":14}],3:[function(require,module,exports){
+module.exports = {
+  I18nGoParser,
+  ExcelParser
+};
+
+},{"text-encoding":11,"xlsx":16}],5:[function(require,module,exports){
 var Iterator = require("./Iterator");
-var { I18nGoParser, ExcelParser } = require("./Parser");
+
+var _require = require("./Parsers"),
+    I18nGoParser = _require.I18nGoParser,
+    ExcelParser = _require.ExcelParser;
+
+var AlertWindow = require("./AlertWindow");
+var FilePicker = require("./FilePicker");
 
 var CONSTANTS = {
   TITLE: "Sketch i18n",
   MESSAGES: {
     WRONG_SELECTION: "Only Artboards can be translated by this plugin",
     EMPTY_SELECTION: "Please select an artboard to be translated",
-    NO_FILE_SELECTED: "Please select at least a translation file",
+    NO_FILE_SELECTED: "Please select at least a translation file"
   }
 };
 
-var translate = function (context, parser) {
+var translate = function translate(context, parser) {
   var ALERT = new AlertWindow(CONSTANTS.TITLE);
   var selectedLayers = context.api().selectedDocument.selectedLayers;
   var selection = new Iterator(selectedLayers);
@@ -191,7 +257,7 @@ var translate = function (context, parser) {
   var translatedContent = parser.parse(content);
 
   artboards.forEach(function (layer) {
-    for (var key in translatedContent) {
+    var _loop = function _loop(key) {
       var translations = translatedContent[key];
 
       var duplicatedLayer = layer.duplicate();
@@ -206,79 +272,22 @@ var translate = function (context, parser) {
         var translation = translations[text] || text;
         layer.text = translation;
       });
+    };
+
+    for (var key in translatedContent) {
+      _loop(key);
     }
   });
 };
 
-var FilePicker = function () {
-  var panel = NSOpenPanel.openPanel();
-  panel.setCanChooseFiles(true);
-  panel.setCanChooseDirectories(false);
-  panel.setAllowsMultipleSelection(true);
-
-  var files = [];
-  var modelResult = NSCancelButton;
-
-  var show = function () {
-    modelResult = panel.runModal();
-  };
-
-  var choseFiles = function () {
-    return modelResult == NSOKButton && panel.filenames().length != 0;
-  };
-
-  var read = function (encoding) {
-    if (encoding === undefined) {
-      encoding = NSUTF8StringEncoding;
-    }
-
-    var result = {};
-    if (!choseFiles()) {
-      return result;
-    }
-    var filenames = panel.filenames();
-    for (i = 0; i < filenames.length; i++) {
-      var fullpath = filenames[i];
-
-      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
-      var filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
-      result[filename] = content;
-    }
-    return result;
-  };
-
-  return {
-    choseFiles: choseFiles,
-    show: show,
-    read: read
-  };
-};
-
-var AlertWindow = function (title) {
-  var window = COSAlertWindow.new();
-
-  window.setMessageText(title);
-  window.addButtonWithTitle("OK");
-
-  var show = function (message) {
-    window.setInformativeText(message);
-    window.runModal();
-  }
-
-  return {
-    show: show
-  };
-};
-
-translateFromJSONGo = function (context) {
+translateFromJSONGo = function translateFromJSONGo(context) {
   translate(context, new I18nGoParser());
 };
 
-translateFromExcel = function (context) {
+translateFromExcel = function translateFromExcel(context) {
   translate(context, new ExcelParser());
 };
-
-},{"./Iterator":1,"./Parser":2}],4:[function(require,module,exports){
+},{"./AlertWindow":1,"./FilePicker":2,"./Iterator":3,"./Parsers":4}],6:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -404,9 +413,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],5:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -1517,7 +1526,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":4,"ieee754":8}],7:[function(require,module,exports){
+},{"base64-js":6,"ieee754":10}],9:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1582,7 +1591,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -1668,7 +1677,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -1679,7 +1688,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":11}],10:[function(require,module,exports){
+},{"./lib/encoding.js":13}],12:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -1727,7 +1736,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5041,7 +5050,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":10}],12:[function(require,module,exports){
+},{"./encoding-indexes.js":12}],14:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -6370,7 +6379,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":6}],13:[function(require,module,exports){
+},{"buffer":8}],15:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15362,7 +15371,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":6}],14:[function(require,module,exports){
+},{"buffer":8}],16:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -33145,4 +33154,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":12,"./jszip.js":13,"buffer":6,"crypto":5,"fs":5,"km4Umf":7,"stream":5}]},{},[3])
+},{"./dist/cpexcel.js":14,"./jszip.js":15,"buffer":8,"crypto":7,"fs":7,"km4Umf":9,"stream":7}]},{},[5])

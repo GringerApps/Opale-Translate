@@ -1,26 +1,26 @@
-describe("Player", function() {
-  var { I18nGoParser, ExcelParser } = require('../i18n.sketchplugin/Contents/Sketch/Parser');
-  var fs = require('fs');
+describe("parsers", () => {
+  const { I18nGoParser, ExcelParser } = require('../i18n.sketchplugin/Contents/Sketch/Parsers');
+  const fs = require('fs');
 
   const FIXTURES_FOLDER = 'spec/fixtures';
 
-  describe("I18nGOParser", function () {
-    it('should uses Latin 1 encoding', function () {
-      var parser = new I18nGoParser();
+  describe("I18nGOParser", () => {
+    it('should uses Latin 1 encoding', () => {
+      const parser = new I18nGoParser();
 
       expect(parser.encoding).toEqual(NSUTF8StringEncoding);
     });
 
-    describe("with a proper input", function () {
-      it("should parse properly", function () {
-        var fixturesFolder = `${FIXTURES_FOLDER}/i18n-go`
-        var contents = {
+    describe("with a proper input", () => {
+      it("should parse properly", () => {
+        const fixturesFolder = `${FIXTURES_FOLDER}/i18n-go`
+        const contents = {
           fr: fs.readFileSync(`${fixturesFolder}/fr.json`, 'utf8'),
           en: fs.readFileSync(`${fixturesFolder}/en.json`, 'utf8')
         };
-        var parser = new I18nGoParser();
+        const parser = new I18nGoParser();
 
-        var expectedResult = {
+        const expectedResult = {
           en: {
             name: "Name"
           },
@@ -34,22 +34,22 @@ describe("Player", function() {
     });
   });
 
-  describe("ExcelParser", function () {
-    it('should uses Latin 1 encoding', function () {
-      var parser = new ExcelParser();
+  describe("ExcelParser", () => {
+    it('should uses Latin 1 encoding', () => {
+      const parser = new ExcelParser();
 
       expect(parser.encoding).toEqual(NSISOLatin1StringEncoding);
     });
 
-    describe("with a proper input", function () {
-      it("should parse properly", function () {
-        var fixturesFolder = `${FIXTURES_FOLDER}/xslx`
-        var contents = {
+    describe("with a proper input", () => {
+      it("should parse properly", () => {
+        const fixturesFolder = `${FIXTURES_FOLDER}/xlsx`
+        const contents = {
           translations: fs.readFileSync(`${fixturesFolder}/translations.xlsx`, "latin1").toString()
         };
-        var parser = new ExcelParser();
+        const parser = new ExcelParser();
 
-        var expectedResult = {
+        const expectedResult = {
           en: {
             name: "Name",
             boat: "Boat"
