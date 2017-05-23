@@ -25,7 +25,6 @@
     "jasmine": "^2.6.0"
   },
   "dependencies": {
-    "mocha-js-delegate": "^0.1.1",
     "text-encoding": "^0.6.4",
     "xlsx": "^0.10.3"
   }

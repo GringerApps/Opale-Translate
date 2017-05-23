@@ -208,7 +208,7 @@ module.exports = {
   ExcelParser
 };
 
-},{"text-encoding":11,"xlsx":16}],5:[function(require,module,exports){
+},{"text-encoding":12,"xlsx":17}],5:[function(require,module,exports){
 var Iterator = require("./Iterator");
 
 var _require = require("./Parsers"),
@@ -217,9 +217,10 @@ var _require = require("./Parsers"),
 
 var AlertWindow = require("./AlertWindow");
 var FilePicker = require("./FilePicker");
+var delegate = require("mocha-js-delegate");
 
 var CONSTANTS = {
-  TITLE: "Sketch i18n",
+  TITLE: "Opal Translate",
   MESSAGES: {
     WRONG_SELECTION: "Only Artboards can be translated by this plugin",
     EMPTY_SELECTION: "Please select an artboard to be translated",
@@ -246,15 +247,34 @@ var translate = function translate(context, parser) {
     return;
   }
 
-  var fileReader = new FilePicker();
-  fileReader.show();
-  if (!fileReader.choseFiles()) {
-    ALERT.show(CONSTANTS.MESSAGES.NO_FILE_SELECTED);
-    return;
-  }
+  var files = {};
+
+  var filePickerTargetClass = delegate({
+    "pickFile": function pickFile() {
+      var fileReader = new FilePicker();
+      fileReader.show();
+
+      var fp = new FilePicker();
+      fp.show();
+      files = fp.read(parser.encoding);
+    }
+  });
+
+  var filePickerBtnTarget = filePickerTargetClass.getClassInstance();
+
+  var filePickerBtn = NSButton.buttonWithTitle_target_action_("Select file", filePickerBtnTarget, "pickFile");
+
   var content = fileReader.read(parser.encoding);
 
   var translatedContent = parser.parse(content);
+
+  var window = COSAlertWindow.new();
+
+  window.setMessageText("Opal Translate");
+
+  window.addAccessoryView(filePickerBtn);
+
+  window.runModal();
 
   artboards.forEach(function (layer) {
     var _loop = function _loop(key) {
@@ -287,7 +307,7 @@ translateFromJSONGo = function translateFromJSONGo(context) {
 translateFromExcel = function translateFromExcel(context) {
   translate(context, new ExcelParser());
 };
-},{"./AlertWindow":1,"./FilePicker":2,"./Iterator":3,"./Parsers":4}],6:[function(require,module,exports){
+},{"./AlertWindow":1,"./FilePicker":2,"./Iterator":3,"./Parsers":4,"mocha-js-delegate":11}],6:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -1678,6 +1698,71 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 }
 
 },{}],11:[function(require,module,exports){
+/* globals NSUUID MOClassDescription NSObject NSSelectorFromString NSClassFromString */
+
+module.exports = function (selectorHandlerDict, superclass) {
+  var uniqueClassName = 'MochaJSDelegate_DynamicClass_' + NSUUID.UUID().UUIDString()
+
+  var delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(uniqueClassName, superclass || NSObject)
+
+  delegateClassDesc.registerClass()
+
+  // Storage Handlers
+  var handlers = {}
+
+  // Define interface
+  this.setHandlerForSelector = function (selectorString, func) {
+    var handlerHasBeenSet = (selectorString in handlers)
+    var selector = NSSelectorFromString(selectorString)
+
+    handlers[selectorString] = func
+
+    /*
+      For some reason, Mocha acts weird about arguments: https://github.com/logancollins/Mocha/issues/28
+      We have to basically create a dynamic handler with a likewise dynamic number of predefined arguments.
+    */
+    if (!handlerHasBeenSet) {
+      var args = []
+      var regex = /:/g
+      while (regex.exec(selectorString)) {
+        args.push('arg' + args.length)
+      }
+
+      var dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })')
+
+      delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction)
+    }
+  }
+
+  this.removeHandlerForSelector = function (selectorString) {
+    delete handlers[selectorString]
+  }
+
+  this.getHandlerForSelector = function (selectorString) {
+    return handlers[selectorString]
+  }
+
+  this.getAllHandlers = function () {
+    return handlers
+  }
+
+  this.getClass = function () {
+    return NSClassFromString(uniqueClassName)
+  }
+
+  this.getClassInstance = function () {
+    return NSClassFromString(uniqueClassName).new()
+  }
+
+  // Convenience
+  if (typeof selectorHandlerDict === 'object') {
+    for (var selectorString in selectorHandlerDict) {
+      this.setHandlerForSelector(selectorString, selectorHandlerDict[selectorString])
+    }
+  }
+}
+
+},{}],12:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -1688,7 +1773,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":13}],12:[function(require,module,exports){
+},{"./lib/encoding.js":14}],13:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -1736,7 +1821,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5050,7 +5135,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":12}],14:[function(require,module,exports){
+},{"./encoding-indexes.js":13}],15:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -6379,7 +6464,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":8}],15:[function(require,module,exports){
+},{"buffer":8}],16:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15371,7 +15456,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":8}],16:[function(require,module,exports){
+},{"buffer":8}],17:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -33154,4 +33239,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":14,"./jszip.js":15,"buffer":8,"crypto":7,"fs":7,"km4Umf":9,"stream":7}]},{},[5])
+},{"./dist/cpexcel.js":15,"./jszip.js":16,"buffer":8,"crypto":7,"fs":7,"km4Umf":9,"stream":7}]},{},[5])
