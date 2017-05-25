@@ -9,7 +9,7 @@ const DIST_FOLDER = `${PLUGIN_FOLDER}/build`;
 
 gulp.task('test', () => run('npm test').exec());
 
-gulp.task('build', ['test'], () =>
+gulp.task('build', () =>
   gulp.src(`${PLUGIN_FOLDER}/plugin.js`)
     .pipe(babel({
       presets: ['es2015']

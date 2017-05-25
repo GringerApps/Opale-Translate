@@ -3,6 +3,7 @@ const { I18nGoParser, ExcelParser } = require("./Parsers");
 const AlertWindow = require("./AlertWindow");
 const FilePicker = require("./FilePicker")
 const Delegator = require("./Delegator");
+const Window = require("./Window");
 
 const CONSTANTS = {
   TITLE: "Opal Translate",

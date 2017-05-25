@@ -18,6 +18,64 @@ class AlertWindow {
 module.exports = AlertWindow;
 
 },{}],2:[function(require,module,exports){
+class Delegator {
+  constructor(selectorHandlerDict, superclass) {
+    this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
+    this.delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueClassName, superclass || NSObject);
+    this.delegateClassDesc.registerClass();
+    this.handlers = {};
+
+    if (typeof selectorHandlerDict === 'object') {
+      for (let selectorString in selectorHandlerDict) {
+        this.setHandlerForSelector(selectorString, selectorHandlerDict[selectorString]);
+      }
+    }
+  }
+
+  setHandlerForSelector(selectorString, func) {
+    const handlerHasBeenSet = (selectorString in this.handlers);
+    const selector = NSSelectorFromString(selectorString);
+
+    this.handlers[selectorString] = func;
+
+    if (!handlerHasBeenSet) {
+      const args = [];
+      const regex = /:/g;
+      while (regex.exec(selectorString)) {
+        args.push('arg' + args.length);
+      }
+      const handlers = this.handlers;
+      const dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })');
+
+      this.delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction);
+    }
+  }
+
+  removeHandlerForSelector(selectorString) {
+    delete this.handlers[selectorString];
+  }
+
+  getHandlerForSelector(selectorString) {
+    return this.handlers[selectorString];
+  }
+
+  getAllHandlers() {
+    return this.handlers;
+  }
+
+  getClass() {
+    return NSClassFromString(this.uniqueClassName);
+  }
+
+  getClassInstance() {
+    const instance = NSClassFromString(this.uniqueClassName).alloc().init();
+    return instance;
+  }
+}
+
+module.exports = Delegator;
+
+},{}],3:[function(require,module,exports){
 class FilePicker {
   constructor() {
     const panel = NSOpenPanel.openPanel();
@@ -36,6 +94,10 @@ class FilePicker {
   choseFiles() {
     return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
   };
+
+  files() {
+    return this.panel.filenames();
+  }
 
   read(encoding) {
     if (encoding === undefined) {
@@ -60,7 +122,7 @@ class FilePicker {
 
 module.exports = FilePicker;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -147,7 +209,7 @@ class Iterator {
 
 module.exports = Iterator;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 const XLSX = require("xlsx");
 const { TextEncoder } = require("text-encoding");
 
@@ -208,7 +270,101 @@ module.exports = {
   ExcelParser
 };
 
-},{"text-encoding":12,"xlsx":17}],5:[function(require,module,exports){
+},{"text-encoding":13,"xlsx":18}],6:[function(require,module,exports){
+ class Window {
+   constructor() {
+     this._views = []
+     this._alert = NSAlert.new();
+	}
+
+  _layout() {
+    if (!this._views) {
+        return;
+    }
+
+    let height = 0;
+    const sup = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 1));
+
+    this._views.reverse().forEach((view) => {
+      const currentFrame = view.bounds();
+
+      currentFrame.origin.y = height;
+
+      height += currentFrame.size.height + 8;
+
+      view.setFrame(currentFrame);
+
+      sup.addSubview(view);
+    });
+
+    const viewFrame = sup.frame();
+    viewFrame.size.height = height;
+
+    sup.setFrame(viewFrame);
+
+
+    this._alert.setAccessoryView(sup);
+  }
+
+  addAccessoryView(view) {
+    this._views.push(view);
+  }
+
+  addTextLabelWithValue(value) {
+    const tf = NSTextField.alloc().initWithFrame(NSMakeRect(0, 0, 300, 16));
+
+    tf.setDrawsBackground(false);
+    tf.setEditable(false);
+    tf.setBezeled(false);
+    tf.setSelectable(true);
+
+    if (value) {
+        tf.setStringValue(value);
+    }
+
+    this.addAccessoryView(tf);
+  }
+
+  setMessageText(messageText) {
+    this._alert.setMessageText(messageText);
+  }
+
+  setInformativeText(informativeText) {
+    this._alert.setInformativeText(informativeText);
+  }
+
+  messageText() {
+    return this._alert.messageText;
+  }
+
+  informativeText() {
+    return this._alert.informativeText;
+  }
+
+  addTextFieldWithValue(value) {
+    const tf = NSTextField.alloc.initWithFrame(NSMakeRect(0, 0, 300, 24));
+
+    if (value) {
+        tf.setStringValue(value);
+    }
+
+    this.addAccessoryView(tf);
+  }
+
+
+
+  runModal() {
+    this._layout();
+
+    return this._alert.runModal();
+  }
+}
+
+},{}],7:[function(require,module,exports){
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var Iterator = require("./Iterator");
 
 var _require = require("./Parsers"),
@@ -217,7 +373,8 @@ var _require = require("./Parsers"),
 
 var AlertWindow = require("./AlertWindow");
 var FilePicker = require("./FilePicker");
-var delegate = require("mocha-js-delegate");
+var Delegator = require("./Delegator");
+var Window = require("./Window");
 
 var CONSTANTS = {
   TITLE: "Opal Translate",
@@ -228,9 +385,11 @@ var CONSTANTS = {
   }
 };
 
-var translate = function translate(context, parser) {
+translate = function translate(context) {
+  var parser = new ExcelParser();
   var ALERT = new AlertWindow(CONSTANTS.TITLE);
-  var selectedLayers = context.api().selectedDocument.selectedLayers;
+  var api = context.api();
+  var selectedLayers = api.selectedDocument.selectedLayers;
   var selection = new Iterator(selectedLayers);
 
   if (selection.count() == 0) {
@@ -247,34 +406,42 @@ var translate = function translate(context, parser) {
     return;
   }
 
-  var files = {};
+  var window = new Window();
 
-  var filePickerTargetClass = delegate({
-    "pickFile": function pickFile() {
-      var fileReader = new FilePicker();
-      fileReader.show();
+  var btn = new FilePickerBtn("Select a spreadsheet");
+  btn.addToWindow(window);
 
-      var fp = new FilePicker();
-      fp.show();
-      files = fp.read(parser.encoding);
-    }
+  var imageUrl = resourceNamed();
+
+  var applyToSelector = new DropdownButton();
+  applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
+  applyToSelector.onSelectionChanged(function (a, b) {
+    log(a);log(b);
   });
+  applyToSelector.addToWindow(window);
 
-  var filePickerBtnTarget = filePickerTargetClass.getClassInstance();
+  var newArtboardToSelector = new DropdownButton();
+  newArtboardToSelector.setLabel("New artboard to the:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  newArtboardToSelector.addItems(["Right", "Bottom"]);
+  newArtboardToSelector.onSelectionChanged(function (a, b) {
+    log(a);log(b);
+  });
+  newArtboardToSelector.addToWindow(window);
 
-  var filePickerBtn = NSButton.buttonWithTitle_target_action_("Select file", filePickerBtnTarget, "pickFile");
+  var caseMatchingSelector = new DropdownButton();
+  caseMatchingSelector.setLabel("Case matching:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  caseMatchingSelector.addItems(["Case incensitive", "Case sensitive"]);
+  caseMatchingSelector.onSelectionChanged(function (a, b) {
+    log(a);log(b);
+  });
+  caseMatchingSelector.addToWindow(window);
+  window.setMessageText("Geode Translate");
+  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
 
-  var content = fileReader.read(parser.encoding);
+  alert = window.runModal();
 
-  var translatedContent = parser.parse(content);
-
-  var window = COSAlertWindow.new();
-
-  window.setMessageText("Opal Translate");
-
-  window.addAccessoryView(filePickerBtn);
-
-  window.runModal();
+  var translatedContent = parser.parse(fileSelectButton.files());
 
   artboards.forEach(function (layer) {
     var _loop = function _loop(key) {
@@ -300,14 +467,79 @@ var translate = function translate(context, parser) {
   });
 };
 
-translateFromJSONGo = function translateFromJSONGo(context) {
-  translate(context, new I18nGoParser());
-};
+var FILE_PICKER_DELEGATOR = new Delegator({
+  "pickFile": function pickFile() {
+    var fileReader = new FilePicker();
+    fileReader.show();
 
-translateFromExcel = function translateFromExcel(context) {
-  translate(context, new ExcelParser());
-};
-},{"./AlertWindow":1,"./FilePicker":2,"./Iterator":3,"./Parsers":4,"mocha-js-delegate":11}],6:[function(require,module,exports){
+    var fp = new FilePicker();
+    fp.show();
+    undefined._files = fp.files();
+  },
+  "files": function files() {
+    return undefined._files || [];
+  }
+});
+
+var FilePickerBtn = function () {
+  function FilePickerBtn(label) {
+    _classCallCheck(this, FilePickerBtn);
+
+    var target = FILE_PICKER_DELEGATOR.getClassInstance();
+    var btn = NSButton.buttonWithTitle_target_action_("Select file", target, "pickFile");
+    btn.setHighlighted(true);
+
+    this._btn = btn;
+    this._label = label || null;
+  }
+
+  _createClass(FilePickerBtn, [{
+    key: "files",
+    value: function files() {
+      return this.target.files();
+    }
+  }, {
+    key: "addToWindow",
+    value: function addToWindow(window) {
+      var btn = this._btn;
+      var tf = void 0;
+      var view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 30));
+      var tfFrame = NSMakeRect(0, 0, 130, 20);
+
+      if (this._label) {
+        tf = NSTextField.alloc().initWithFrame(tfFrame);
+        tf.setDrawsBackground(false);
+        tf.setEditable(false);
+        tf.setBezeled(false);
+        tf.setSelectable(true);
+        tf.setStringValue(this._label);
+      }
+
+      var btnFrame = btn.bounds();
+
+      var btnOrigin = NSMakePoint(tfFrame.origin.x + tfFrame.size.width, (NSHeight(view.bounds()) - NSHeight(btnFrame)) / 2);
+
+      btn.setFrameOrigin(btnOrigin);
+      btn.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+      if (tf != null) {
+        var tfOrigin = NSMakePoint(tf.frame().origin.x, (NSHeight(view.bounds()) - NSHeight(tf.bounds())) / 2);
+
+        tf.setFrameOrigin(tfOrigin);
+        tf.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+        view.addSubview(tf);
+      }
+
+      view.addSubview(btn);
+
+      window.addAccessoryView(view);
+    }
+  }]);
+
+  return FilePickerBtn;
+}();
+},{"./AlertWindow":1,"./Delegator":2,"./FilePicker":3,"./Iterator":4,"./Parsers":5,"./Window":6}],8:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -433,9 +665,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -1546,7 +1778,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":6,"ieee754":10}],9:[function(require,module,exports){
+},{"base64-js":8,"ieee754":12}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1611,7 +1843,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -1697,72 +1929,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],11:[function(require,module,exports){
-/* globals NSUUID MOClassDescription NSObject NSSelectorFromString NSClassFromString */
-
-module.exports = function (selectorHandlerDict, superclass) {
-  var uniqueClassName = 'MochaJSDelegate_DynamicClass_' + NSUUID.UUID().UUIDString()
-
-  var delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(uniqueClassName, superclass || NSObject)
-
-  delegateClassDesc.registerClass()
-
-  // Storage Handlers
-  var handlers = {}
-
-  // Define interface
-  this.setHandlerForSelector = function (selectorString, func) {
-    var handlerHasBeenSet = (selectorString in handlers)
-    var selector = NSSelectorFromString(selectorString)
-
-    handlers[selectorString] = func
-
-    /*
-      For some reason, Mocha acts weird about arguments: https://github.com/logancollins/Mocha/issues/28
-      We have to basically create a dynamic handler with a likewise dynamic number of predefined arguments.
-    */
-    if (!handlerHasBeenSet) {
-      var args = []
-      var regex = /:/g
-      while (regex.exec(selectorString)) {
-        args.push('arg' + args.length)
-      }
-
-      var dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })')
-
-      delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction)
-    }
-  }
-
-  this.removeHandlerForSelector = function (selectorString) {
-    delete handlers[selectorString]
-  }
-
-  this.getHandlerForSelector = function (selectorString) {
-    return handlers[selectorString]
-  }
-
-  this.getAllHandlers = function () {
-    return handlers
-  }
-
-  this.getClass = function () {
-    return NSClassFromString(uniqueClassName)
-  }
-
-  this.getClassInstance = function () {
-    return NSClassFromString(uniqueClassName).new()
-  }
-
-  // Convenience
-  if (typeof selectorHandlerDict === 'object') {
-    for (var selectorString in selectorHandlerDict) {
-      this.setHandlerForSelector(selectorString, selectorHandlerDict[selectorString])
-    }
-  }
-}
-
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -1773,7 +1940,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":14}],13:[function(require,module,exports){
+},{"./lib/encoding.js":15}],14:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -1821,7 +1988,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5135,7 +5302,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":13}],15:[function(require,module,exports){
+},{"./encoding-indexes.js":14}],16:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -6464,7 +6631,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":8}],16:[function(require,module,exports){
+},{"buffer":10}],17:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15456,7 +15623,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":8}],17:[function(require,module,exports){
+},{"buffer":10}],18:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -33239,4 +33406,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":15,"./jszip.js":16,"buffer":8,"crypto":7,"fs":7,"km4Umf":9,"stream":7}]},{},[5])
+},{"./dist/cpexcel.js":16,"./jszip.js":17,"buffer":10,"crypto":9,"fs":9,"km4Umf":11,"stream":9}]},{},[7])
