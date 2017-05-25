@@ -13,9 +13,11 @@ const CONSTANTS = {
   }
 };
 
-const translate = (context, parser) => {
+translate = (context) => {
+  const parser = new ExcelParser();
   const ALERT = new AlertWindow(CONSTANTS.TITLE);
-  const selectedLayers = context.api().selectedDocument.selectedLayers;
+  const api = context.api();
+  const selectedLayers = api.selectedDocument.selectedLayers;
   const selection = new Iterator(selectedLayers);
 
   if (selection.count() == 0) {
@@ -30,34 +32,37 @@ const translate = (context, parser) => {
     return;
   }
 
-  let files = {};
+  var window = new Window();
 
-  const filePickerTargetClass = new Delegator({
-    "pickFile": () => {
-      const fileReader = new FilePicker();
-      fileReader.show();
+  const btn = new FilePickerBtn("Select a spreadsheet");
+  btn.addToWindow(window);
 
-      var fp = new FilePicker();
-      fp.show();
-      files = fp.read(parser.encoding);
-    }
-  });
+  const imageUrl = resourceNamed()
 
-  const filePickerBtnTarget = filePickerTargetClass.getClassInstance();
+  const applyToSelector = new DropdownButton();
+  applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
+  applyToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
+  applyToSelector.addToWindow(window);
 
-  const filePickerBtn = NSButton.buttonWithTitle_target_action_("Select file", filePickerBtnTarget, "pickFile");
 
-  const content = fileReader.read(parser.encoding);
+  const newArtboardToSelector = new DropdownButton();
+  newArtboardToSelector.setLabel("New artboard to the:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  newArtboardToSelector.addItems(["Right", "Bottom"]);
+  newArtboardToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
+  newArtboardToSelector.addToWindow(window);
 
-  const translatedContent = parser.parse(content);
+  const caseMatchingSelector = new DropdownButton();
+  caseMatchingSelector.setLabel("Case matching:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  caseMatchingSelector.addItems(["Case incensitive", "Case sensitive"]);
+  caseMatchingSelector.onSelectionChanged((a,b) => {log(a); log(b)});
+  caseMatchingSelector.addToWindow(window);
+  window.setMessageText("Geode Translate");
+  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
 
-  const window = COSAlertWindow.new();
+  alert = window.runModal();
 
-  window.setMessageText("Opal Translate");
-
-  window.addAccessoryView(filePickerBtn);
-
-  window.runModal();
+  const translatedContent = parser.parse(fileSelectButton.files());
 
   artboards.forEach((layer) => {
     for (let key in translatedContent) {
@@ -77,10 +82,73 @@ const translate = (context, parser) => {
   });
 };
 
-translateFromJSONGo = (context) => {
-  translate(context, new I18nGoParser());
-};
+const FILE_PICKER_DELEGATOR = new Delegator({
+  "pickFile": () => {
+    const fileReader = new FilePicker();
+    fileReader.show();
 
-translateFromExcel = (context) => {
-  translate(context, new ExcelParser());
-};
+    var fp = new FilePicker();
+    fp.show();
+    this._files = fp.files();
+  },
+  "files": () => {
+    return this._files || [];
+  }
+});
+
+class FilePickerBtn {
+  constructor(label){
+    const target = FILE_PICKER_DELEGATOR.getClassInstance();
+    const btn = NSButton.buttonWithTitle_target_action_("Select file", target, "pickFile");
+    btn.setHighlighted(true);
+
+    this._btn = btn;
+    this._label = label || null;
+  }
+
+  files() {
+    return this.target.files();
+  }
+
+  addToWindow(window) {
+    const btn = this._btn;
+    let tf;
+    const view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 30));
+    const tfFrame = NSMakeRect(0, 0, 130, 20);
+
+    if (this._label) {
+      tf = NSTextField.alloc().initWithFrame(tfFrame);
+      tf.setDrawsBackground(false);
+      tf.setEditable(false);
+      tf.setBezeled(false);
+      tf.setSelectable(true);
+      tf.setStringValue(this._label);
+    }
+
+    var btnFrame = btn.bounds();
+
+    const btnOrigin = NSMakePoint(
+      tfFrame.origin.x + tfFrame.size.width,
+      (NSHeight(view.bounds()) - NSHeight(btnFrame)) / 2
+    )
+
+    btn.setFrameOrigin(btnOrigin);
+    btn.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+    if (tf != null) {
+      const tfOrigin = NSMakePoint(
+        tf.frame().origin.x,
+        (NSHeight(view.bounds()) - NSHeight(tf.bounds())) / 2
+      );
+
+      tf.setFrameOrigin(tfOrigin);
+      tf.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+      view.addSubview(tf);
+    }
+
+    view.addSubview(btn);
+
+    window.addAccessoryView(view);
+  }
+}

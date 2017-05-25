@@ -1,5 +1,5 @@
 class Delegator {
-  constuctor(selectorHandlerDict, superclass) {
+  constructor(selectorHandlerDict, superclass) {
     this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
     this.delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueClassName, superclass || NSObject);
     this.delegateClassDesc.registerClass();
@@ -13,7 +13,7 @@ class Delegator {
   }
 
   setHandlerForSelector(selectorString, func) {
-    const handlerHasBeenSet = (selectorString in handlers);
+    const handlerHasBeenSet = (selectorString in this.handlers);
     const selector = NSSelectorFromString(selectorString);
 
     this.handlers[selectorString] = func;
@@ -24,7 +24,7 @@ class Delegator {
       while (regex.exec(selectorString)) {
         args.push('arg' + args.length);
       }
-
+      const handlers = this.handlers;
       const dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })');
 
       this.delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction);
@@ -48,6 +48,9 @@ class Delegator {
   }
 
   getClassInstance() {
-    return NSClassFromString(this.uniqueClassName).new();
+    const instance = NSClassFromString(this.uniqueClassName).alloc().init();
+    return instance;
   }
 }
+
+module.exports = Delegator;

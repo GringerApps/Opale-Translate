@@ -17,6 +17,10 @@ class FilePicker {
     return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
   };
 
+  files() {
+    return this.panel.filenames();
+  }
+
   read(encoding) {
     if (encoding === undefined) {
       encoding = NSUTF8StringEncoding;

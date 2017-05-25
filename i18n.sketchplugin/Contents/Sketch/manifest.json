@@ -8,23 +8,14 @@
   "disableCocoaScriptPreprocessor": true,
   "commands" : [
     {
-      "name": "using go_i18n format",
-      "identifier": "translateFromJSONGo",
+      "name": "Translate",
+      "identifier": "translate",
       "script": "build/plugin.js",
-      "handler": "translateFromJSONGo"
-    },
-    {
-      "name": "using excel format",
-      "identifier": "translateFromExcel",
-      "script": "build/plugin.js",
-      "handler": "translateFromExcel"
+      "handler": "translate"
     }
   ],
   "menu": {
-    "title": "Translate selection",
-    "items": [
-      "translateFromJSONGo",
-      "translateFromExcel"
-    ]
+    "isRoot": true,
+    "items": ["translate"]
   }
 }
