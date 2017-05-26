@@ -4,6 +4,7 @@ const AlertWindow = require("./AlertWindow");
 const FilePicker = require("./FilePicker")
 const Delegator = require("./Delegator");
 const Window = require("./Window");
+const DropdownButton = require("./DropdownButton");
 
 const CONSTANTS = {
   TITLE: "Opal Translate",
