@@ -86,3 +86,5 @@
     return this._alert.runModal();
   }
 }
+
+module.exports = Window;
