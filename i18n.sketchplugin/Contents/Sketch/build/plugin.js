@@ -76,6 +76,126 @@ class Delegator {
 module.exports = Delegator;
 
 },{}],3:[function(require,module,exports){
+const Delegator = require("./Delegator");
+
+class DropdownButton {
+  static get LABEL_HALIGN() { return 0; }
+  static get LABEL_VALIGN() { return 1; }
+  static get LABEL_TEXTALIGN_LEFT() { return 0; }
+  static get LABEL_TEXTALIGN_RIGHT() { return 1; }
+
+  constructor(pullsDown) {
+    const FRAME = NSMakeRect(20.0, 20.0, 300.0, 25);
+
+    if (pullsDown === undefined) {
+      pullsDown = false;
+    }
+
+    const self = this;
+    const NSPopUpButtonDelegator = new Delegator({
+      callback: () => {
+        self._selectionChanged();
+      }
+    });
+    const delegator = NSPopUpButtonDelegator.getClassInstance();
+
+    const popupBtn = NSPopUpButton.alloc().initWithFrame_pullsDown(FRAME, pullsDown);
+    popupBtn.setAction("callback");
+    popupBtn.setTarget(delegator);
+
+    this._selectionChangedCallback = () => {};
+    this._btn = popupBtn;
+    this._label = {
+      alignment: DropdownButton.LABEL_HALIGN,
+      title: null,
+      text_alignment:DropdownButton.LABEL_TEXTALIGN_LEFT
+    }
+  }
+
+  _selectionChanged() {
+    const idx = this._btn.indexOfSelectedItem();
+    const title = this._btn.titleOfSelectedItem();
+    this._selectionChangedCallback(idx, title);
+  }
+
+  _hasLabel() {
+    return this._label.title !== null;
+  }
+
+  _valign() {
+    return this._label.alignment === DropdownButton.LABEL_VALIGN;
+  }
+
+  onSelectionChanged(callback) {
+    this._selectionChangedCallback = callback;
+  }
+
+  setLabel(title, alignment, text_alignment) {
+    if (alignment !== undefined) {
+      this._label.alignment = alignment;
+    }
+    if (text_alignment !== undefined) {
+      this._label.text_alignment = text_alignment;
+    }
+    this._label.title = title;
+  }
+
+  addItem(title) {
+    this._btn.addItemWithTitle(title);
+  }
+
+  addItems(titles) {
+    this._btn.addItemsWithTitles(titles);
+  }
+
+  addToWindow(window) {
+    const btn = this._btn;
+    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 60) : NSMakeRect(0, 0, 300, 30);
+    const view = NSView.alloc().initWithFrame(frame);
+
+    let x = 0;
+    let y = 0;
+
+    let tf;
+
+    if (this._hasLabel()) {
+      const tfFrame = NSMakeRect(x, y, 130, 20);
+      tf = NSTextField.alloc().initWithFrame(tfFrame);
+      tf.setDrawsBackground(false);
+      tf.setEditable(false);
+      tf.setBezeled(false);
+      tf.setSelectable(true);
+      tf.setStringValue(this._label.title);
+      tf.setAlignment(this._label.text_alignment);
+
+      if(this._valign()) {
+        y += NSHeight(tfFrame);
+      } else {
+        const tfOrigin = NSMakePoint(x, (NSHeight(frame) - NSHeight(tfFrame)) / 2);
+        tf.setFrameOrigin(tfOrigin);
+        tf.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+        x += NSWidth(tfFrame);
+      }
+      view.addSubview(tf);
+    }
+
+    var btnFrame = btn.bounds();
+    if (this._valign()) {
+      btn.setFrameOrigin(NSMakePoint(x, y));
+    } else {
+      const btnOrigin = NSMakePoint(x, (NSHeight(frame) - NSHeight(btnFrame)) / 2);
+      btn.setFrameOrigin(btnOrigin);
+      btn.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+    }
+
+    view.addSubview(btn);
+    window.addAccessoryView(view);
+  }
+}
+
+module.exports = DropdownButton;
+
+},{"./Delegator":2}],4:[function(require,module,exports){
 class FilePicker {
   constructor() {
     const panel = NSOpenPanel.openPanel();
@@ -122,7 +242,7 @@ class FilePicker {
 
 module.exports = FilePicker;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -209,7 +329,7 @@ class Iterator {
 
 module.exports = Iterator;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 const XLSX = require("xlsx");
 const { TextEncoder } = require("text-encoding");
 
@@ -270,7 +390,7 @@ module.exports = {
   ExcelParser
 };
 
-},{"text-encoding":13,"xlsx":18}],6:[function(require,module,exports){
+},{"text-encoding":14,"xlsx":19}],7:[function(require,module,exports){
  class Window {
    constructor() {
      this._views = []
@@ -360,7 +480,9 @@ module.exports = {
   }
 }
 
-},{}],7:[function(require,module,exports){
+module.exports = Window;
+
+},{}],8:[function(require,module,exports){
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -375,6 +497,7 @@ var AlertWindow = require("./AlertWindow");
 var FilePicker = require("./FilePicker");
 var Delegator = require("./Delegator");
 var Window = require("./Window");
+var DropdownButton = require("./DropdownButton");
 
 var CONSTANTS = {
   TITLE: "Opal Translate",
@@ -411,9 +534,16 @@ translate = function translate(context) {
   var btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
 
-  var imageUrl = resourceNamed();
+  var frame = NSMakeRect(0, 0, 930, 468);
+  var imageUrl = resourceNamed("grid.png");
+  var image = NSImage.alloc().initWithContentsOfURL(imageUrl);
+  var rect = NSMakeRect(10, 10, 400, 300);
+  var imgView = NSImageView.alloc().initWithFrame(frame);
+  imgView.setImage(image);
+  window.addAccessoryView(imgView);
 
-  var applyToSelector = new DropdownButton();
+  var applyToSelector = new DropdownButton("grid.png");
+
   applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
   applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
   applyToSelector.onSelectionChanged(function (a, b) {
@@ -539,7 +669,7 @@ var FilePickerBtn = function () {
 
   return FilePickerBtn;
 }();
-},{"./AlertWindow":1,"./Delegator":2,"./FilePicker":3,"./Iterator":4,"./Parsers":5,"./Window":6}],8:[function(require,module,exports){
+},{"./AlertWindow":1,"./Delegator":2,"./DropdownButton":3,"./FilePicker":4,"./Iterator":5,"./Parsers":6,"./Window":7}],9:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -665,9 +795,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],9:[function(require,module,exports){
-
 },{}],10:[function(require,module,exports){
+
+},{}],11:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -1778,7 +1908,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":8,"ieee754":12}],11:[function(require,module,exports){
+},{"base64-js":9,"ieee754":13}],12:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1843,7 +1973,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -1929,7 +2059,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -1940,7 +2070,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":15}],14:[function(require,module,exports){
+},{"./lib/encoding.js":16}],15:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -1988,7 +2118,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5302,7 +5432,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":14}],16:[function(require,module,exports){
+},{"./encoding-indexes.js":15}],17:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -6631,7 +6761,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":10}],17:[function(require,module,exports){
+},{"buffer":11}],18:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15623,7 +15753,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":10}],18:[function(require,module,exports){
+},{"buffer":11}],19:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -33406,4 +33536,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":16,"./jszip.js":17,"buffer":10,"crypto":9,"fs":9,"km4Umf":11,"stream":9}]},{},[7])
+},{"./dist/cpexcel.js":17,"./jszip.js":18,"buffer":11,"crypto":10,"fs":10,"km4Umf":12,"stream":10}]},{},[8])

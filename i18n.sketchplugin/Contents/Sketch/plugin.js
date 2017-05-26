@@ -39,9 +39,18 @@ translate = (context) => {
   const btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
 
-  const imageUrl = resourceNamed()
+  const frame = NSMakeRect(0, 0, 930, 468);
+  const imageUrl = resourceNamed("grid.png");
+  const image = NSImage.alloc().initWithContentsOfURL(imageUrl);
+  const rect = NSMakeRect(10, 10, 400, 300);
+  const imgView = NSImageView.alloc().initWithFrame(frame);
+  imgView.setImage(image);
+  window.addAccessoryView(imgView);
 
-  const applyToSelector = new DropdownButton();
+
+  const applyToSelector = new DropdownButton("grid.png");
+
+
   applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
   applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
   applyToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
