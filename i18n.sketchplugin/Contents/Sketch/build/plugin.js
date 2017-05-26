@@ -534,12 +534,13 @@ translate = function translate(context) {
   var btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
 
-  var frame = NSMakeRect(0, 0, 930, 468);
-  var imageUrl = resourceNamed("grid.png");
-  var image = NSImage.alloc().initWithContentsOfURL(imageUrl);
-  var rect = NSMakeRect(10, 10, 400, 300);
+  var frame = NSMakeRect(0, 0, 300, 160);
+  var url = api.resourceNamed("grid.png");
+  var image = NSImage.alloc().initWithContentsOfURL(url);
   var imgView = NSImageView.alloc().initWithFrame(frame);
   imgView.setImage(image);
+  imgView.setImageAlignment(2);
+  imgView.setImageScaling(0);
   window.addAccessoryView(imgView);
 
   var applyToSelector = new DropdownButton("grid.png");

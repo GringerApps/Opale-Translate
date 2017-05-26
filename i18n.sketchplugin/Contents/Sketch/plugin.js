@@ -39,12 +39,13 @@ translate = (context) => {
   const btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
 
-  const frame = NSMakeRect(0, 0, 930, 468);
-  const imageUrl = resourceNamed("grid.png");
-  const image = NSImage.alloc().initWithContentsOfURL(imageUrl);
-  const rect = NSMakeRect(10, 10, 400, 300);
+  const frame = NSMakeRect(0, 0, 300, 160);
+  const url = api.resourceNamed("grid.png");
+  const image = NSImage.alloc().initWithContentsOfURL(url);
   const imgView = NSImageView.alloc().initWithFrame(frame);
   imgView.setImage(image);
+  imgView.setImageAlignment(2);
+  imgView.setImageScaling(0);
   window.addAccessoryView(imgView);
 
 
