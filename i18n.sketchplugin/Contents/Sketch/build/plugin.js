@@ -84,12 +84,8 @@ class DropdownButton {
   static get LABEL_TEXTALIGN_LEFT() { return 0; }
   static get LABEL_TEXTALIGN_RIGHT() { return 1; }
 
-  constructor(pullsDown) {
-    const FRAME = NSMakeRect(20.0, 20.0, 300.0, 25);
-
-    if (pullsDown === undefined) {
-      pullsDown = false;
-    }
+  constructor(pullsDown = false) {
+    const FRAME = NSMakeRect(20.0, 20.0, 170.0, 25);
 
     const self = this;
     const NSPopUpButtonDelegator = new Delegator({
@@ -392,8 +388,9 @@ module.exports = {
 
 },{"text-encoding":14,"xlsx":19}],7:[function(require,module,exports){
  class Window {
-   constructor() {
+   constructor({x , y, w, h} = { x: 0, y: 0, w: 300, h: 1}) {
      this._views = []
+     this._frame = NSMakeRect(x, y, w, h);
      this._alert = NSAlert.new();
 	}
 
@@ -403,7 +400,7 @@ module.exports = {
     }
 
     let height = 0;
-    const sup = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 1));
+    const sup = NSView.alloc().initWithFrame(this._frame);
 
     this._views.reverse().forEach((view) => {
       const currentFrame = view.bounds();
@@ -418,7 +415,9 @@ module.exports = {
     });
 
     const viewFrame = sup.frame();
-    viewFrame.size.height = height;
+    if (viewFrame.size.height <= height) {
+      viewFrame.size.height = height;
+    }
 
     sup.setFrame(viewFrame);
 
@@ -529,7 +528,7 @@ translate = function translate(context) {
     return;
   }
 
-  var window = new Window();
+  var window = new Window({ x: 0, y: 0, w: 400, h: 1 });
 
   var btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
@@ -32958,7 +32957,7 @@ function read_cfb(cfb, opts) {
 }
 
 function read_zip(data, opts) {
-	var zip, d = data;
+var zip, d = data;
 	var o = opts||{};
 	if(!o.type) o.type = (has_buf && Buffer.isBuffer(data)) ? "buffer" : "base64";
 	switch(o.type) {

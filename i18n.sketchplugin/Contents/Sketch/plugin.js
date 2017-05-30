@@ -15,83 +15,84 @@ const CONSTANTS = {
   }
 };
 
-translate = (context) => {
-  const parser = new ExcelParser();
-  const ALERT = new AlertWindow(CONSTANTS.TITLE);
+const verifySelection = (context) => {
   const api = context.api();
   const selectedLayers = api.selectedDocument.selectedLayers;
   const selection = new Iterator(selectedLayers);
 
   if (selection.count() == 0) {
     ALERT.show(CONSTANTS.MESSAGES.EMPTY_SELECTION);
-    return;
+    return false;
   }
 
   const artboards = selection.filter((layer) => layer.isArtboard);
 
   if (artboards.count() != selection.count()) {
     ALERT.show(CONSTANTS.MESSAGES.WRONG_SELECTION);
-    return;
+    return false;
   }
 
-  var window = new Window();
+  return true;
+};
+
+translate = (context) => {
+  const parser = new ExcelParser();
+  const ALERT = new AlertWindow(CONSTANTS.TITLE);
+
+  var window = new Window({ x: 0, y: 0, w: 400, h: 1 });
 
   const btn = new FilePickerBtn("Select a spreadsheet");
   btn.addToWindow(window);
 
-  const frame = NSMakeRect(0, 0, 300, 160);
-  const url = api.resourceNamed("grid.png");
-  const image = NSImage.alloc().initWithContentsOfURL(url);
-  const imgView = NSImageView.alloc().initWithFrame(frame);
-  imgView.setImage(image);
-  imgView.setImageAlignment(2);
-  imgView.setImageScaling(0);
-  window.addAccessoryView(imgView);
+  // const frame = NSMakeRect(0, 0, 300, 160);
+  // const url = api.resourceNamed("grid.png");
+  // const image = NSImage.alloc().initWithContentsOfURL(url);
+  // const imgView = NSImageView.alloc().initWithFrame(frame);
+  // imgView.setImage(image);
+  // imgView.setImageAlignment(2);
+  // imgView.setImageScaling(0);
+  // window.addAccessoryView(imgView);
 
+  const applyToSelector = new DropdownButton()
+    .setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT)
+    .addItems(["Selected artboards"])
+    .onSelectionChanged((_idx, _title) => {})
+    .addToWindow(window);
 
-  const applyToSelector = new DropdownButton("grid.png");
+  // const newArtboardToSelector = new DropdownButton();
+  // newArtboardToSelector.setLabel("New artboard to the:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  // newArtboardToSelector.addItems(["Right", "Bottom"]);
+  // newArtboardToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
+  // newArtboardToSelector.addToWindow(window);
 
-
-  applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
-  applyToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
-  applyToSelector.addToWindow(window);
-
-
-  const newArtboardToSelector = new DropdownButton();
-  newArtboardToSelector.setLabel("New artboard to the:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  newArtboardToSelector.addItems(["Right", "Bottom"]);
-  newArtboardToSelector.onSelectionChanged((a,b) => {log(a); log(b)});
-  newArtboardToSelector.addToWindow(window);
-
-  const caseMatchingSelector = new DropdownButton();
-  caseMatchingSelector.setLabel("Case matching:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  caseMatchingSelector.addItems(["Case incensitive", "Case sensitive"]);
-  caseMatchingSelector.onSelectionChanged((a,b) => {log(a); log(b)});
-  caseMatchingSelector.addToWindow(window);
-  window.setMessageText("Geode Translate");
-  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
+  // const caseMatchingSelector = new DropdownButton();
+  // caseMatchingSelector.setLabel("Case matching:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
+  // caseMatchingSelector.addItems(["Case incensitive", "Case sensitive"]);
+  // caseMatchingSelector.onSelectionChanged((a,b) => {log(a); log(b)});
+  // caseMatchingSelector.addToWindow(window);
+  // window.setMessageText("Geode Translate");
+  // window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
 
   alert = window.runModal();
 
-  const translatedContent = parser.parse(fileSelectButton.files());
+  // const translatedContent = parser.parse(fileSelectButton.files());
 
-  artboards.forEach((layer) => {
-    for (let key in translatedContent) {
-      const translations = translatedContent[key];
+  // artboards.forEach((layer) => {
+  //   for (let key in translatedContent) {
+  //     const translations = translatedContent[key];
 
-      const duplicatedLayer = layer.duplicate();
-      duplicatedLayer.name = duplicatedLayer.name + "-" + key;
+  //     const duplicatedLayer = layer.duplicate();
+  //     duplicatedLayer.name = duplicatedLayer.name + "-" + key;
 
-      const iterator = new Iterator([duplicatedLayer]);
-      const texts = iterator.filter((layer) => layer.isText, true);
-      texts.forEach((layer) => {
-        const text = layer.text;
-        const translation = translations[text] || text;
-        layer.text = translation;
-      });
-    }
-  });
+  //     const iterator = new Iterator([duplicatedLayer]);
+  //     const texts = iterator.filter((layer) => layer.isText, true);
+  //     texts.forEach((layer) => {
+  //       const text = layer.text;
+  //       const translation = translations[text] || text;
+  //       layer.text = translation;
+  //     });
+  //   }
+  // });
 };
 
 const FILE_PICKER_DELEGATOR = new Delegator({

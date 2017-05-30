@@ -6,12 +6,8 @@ class DropdownButton {
   static get LABEL_TEXTALIGN_LEFT() { return 0; }
   static get LABEL_TEXTALIGN_RIGHT() { return 1; }
 
-  constructor(pullsDown) {
-    const FRAME = NSMakeRect(20.0, 20.0, 300.0, 25);
-
-    if (pullsDown === undefined) {
-      pullsDown = false;
-    }
+  constructor(pullsDown = false) {
+    const FRAME = NSMakeRect(20.0, 20.0, 170.0, 25);
 
     const self = this;
     const NSPopUpButtonDelegator = new Delegator({
@@ -50,6 +46,7 @@ class DropdownButton {
 
   onSelectionChanged(callback) {
     this._selectionChangedCallback = callback;
+    return this;
   }
 
   setLabel(title, alignment, text_alignment) {
@@ -60,14 +57,17 @@ class DropdownButton {
       this._label.text_alignment = text_alignment;
     }
     this._label.title = title;
+    return this;
   }
 
   addItem(title) {
     this._btn.addItemWithTitle(title);
+    return this;
   }
 
   addItems(titles) {
     this._btn.addItemsWithTitles(titles);
+    return this;
   }
 
   addToWindow(window) {

@@ -1,6 +1,7 @@
  class Window {
-   constructor() {
+   constructor({x , y, w, h} = { x: 0, y: 0, w: 300, h: 1}) {
      this._views = []
+     this._frame = NSMakeRect(x, y, w, h);
      this._alert = NSAlert.new();
 	}
 
@@ -10,7 +11,7 @@
     }
 
     let height = 0;
-    const sup = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 1));
+    const sup = NSView.alloc().initWithFrame(this._frame);
 
     this._views.reverse().forEach((view) => {
       const currentFrame = view.bounds();
@@ -25,7 +26,9 @@
     });
 
     const viewFrame = sup.frame();
-    viewFrame.size.height = height;
+    if (viewFrame.size.height <= height) {
+      viewFrame.size.height = height;
+    }
 
     sup.setFrame(viewFrame);
 
