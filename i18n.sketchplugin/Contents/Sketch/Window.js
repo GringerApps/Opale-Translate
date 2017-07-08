@@ -1,5 +1,8 @@
+ const { scaleFrame } = require("./viewhelper");
+
  class Window {
-   constructor({x , y, w, h} = { x: 0, y: 0, w: 300, h: 1}) {
+   constructor() {
+     const x = 0, y = 0, w = 500, h = 300;
      this._views = []
      this._frame = NSMakeRect(x, y, w, h);
      this._alert = NSAlert.new();
@@ -31,28 +34,11 @@
     }
 
     sup.setFrame(viewFrame);
-
-
     this._alert.setAccessoryView(sup);
   }
 
   addAccessoryView(view) {
     this._views.push(view);
-  }
-
-  addTextLabelWithValue(value) {
-    const tf = NSTextField.alloc().initWithFrame(NSMakeRect(0, 0, 300, 16));
-
-    tf.setDrawsBackground(false);
-    tf.setEditable(false);
-    tf.setBezeled(false);
-    tf.setSelectable(true);
-
-    if (value) {
-        tf.setStringValue(value);
-    }
-
-    this.addAccessoryView(tf);
   }
 
   setMessageText(messageText) {
@@ -71,17 +57,18 @@
     return this._alert.informativeText;
   }
 
-  addTextFieldWithValue(value) {
-    const tf = NSTextField.alloc.initWithFrame(NSMakeRect(0, 0, 300, 24));
-
-    if (value) {
-        tf.setStringValue(value);
-    }
-
-    this.addAccessoryView(tf);
+  addButtonWithTitle(title) {
+    this._alert.addButtonWithTitle(title);
+    return this;
   }
 
+  buttons() {
+    return this._alert.buttons();
+  }
 
+  close() {
+    NSApp.endSheet(this._alert.window());
+  }
 
   runModal() {
     this._layout();

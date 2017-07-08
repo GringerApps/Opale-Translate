@@ -31,22 +31,6 @@ class Delegator {
     }
   }
 
-  removeHandlerForSelector(selectorString) {
-    delete this.handlers[selectorString];
-  }
-
-  getHandlerForSelector(selectorString) {
-    return this.handlers[selectorString];
-  }
-
-  getAllHandlers() {
-    return this.handlers;
-  }
-
-  getClass() {
-    return NSClassFromString(this.uniqueClassName);
-  }
-
   getClassInstance() {
     const instance = NSClassFromString(this.uniqueClassName).alloc().init();
     return instance;

@@ -1,13 +1,21 @@
 const Delegator = require("./Delegator");
 
 class DropdownButton {
-  static get LABEL_HALIGN() { return 0; }
-  static get LABEL_VALIGN() { return 1; }
-  static get LABEL_TEXTALIGN_LEFT() { return 0; }
-  static get LABEL_TEXTALIGN_RIGHT() { return 1; }
+  static get ALIGNMENT() {
+    return {
+      HORIZONTAL: 0,
+      VERTICAL: 1
+    };
+  }
+  static get TEXT_ALIGNMENT() {
+    return {
+      LEFT: 0,
+      RIGHT: 1
+    };
+  }
 
   constructor(pullsDown = false) {
-    const FRAME = NSMakeRect(20.0, 20.0, 170.0, 25);
+    const FRAME = NSMakeRect(0, 0, 160.0, 22);
 
     const self = this;
     const NSPopUpButtonDelegator = new Delegator({
@@ -24,10 +32,10 @@ class DropdownButton {
     this._selectionChangedCallback = () => {};
     this._btn = popupBtn;
     this._label = {
-      alignment: DropdownButton.LABEL_HALIGN,
+      alignment: DropdownButton.ALIGNMENT.HORIZONTAL,
       title: null,
-      text_alignment:DropdownButton.LABEL_TEXTALIGN_LEFT
-    }
+      text_alignment:DropdownButton.TEXT_ALIGNMENT.LEFT
+    };
   }
 
   _selectionChanged() {
@@ -41,7 +49,7 @@ class DropdownButton {
   }
 
   _valign() {
-    return this._label.alignment === DropdownButton.LABEL_VALIGN;
+    return this._label.alignment === DropdownButton.ALIGNMENT.VERTICAL;
   }
 
   onSelectionChanged(callback) {
@@ -72,7 +80,7 @@ class DropdownButton {
 
   addToWindow(window) {
     const btn = this._btn;
-    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 60) : NSMakeRect(0, 0, 300, 30);
+    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 37) : NSMakeRect(0, 0, 300, 23);
     const view = NSView.alloc().initWithFrame(frame);
 
     let x = 0;
@@ -81,7 +89,7 @@ class DropdownButton {
     let tf;
 
     if (this._hasLabel()) {
-      const tfFrame = NSMakeRect(x, y, 130, 20);
+      const tfFrame = NSMakeRect(x, y, 140, 16);
       tf = NSTextField.alloc().initWithFrame(tfFrame);
       tf.setDrawsBackground(false);
       tf.setEditable(false);
@@ -89,6 +97,7 @@ class DropdownButton {
       tf.setSelectable(true);
       tf.setStringValue(this._label.title);
       tf.setAlignment(this._label.text_alignment);
+      tf.setFont(NSFont.systemFontOfSize(11.5));
 
       if(this._valign()) {
         y += NSHeight(tfFrame);
@@ -101,7 +110,7 @@ class DropdownButton {
       view.addSubview(tf);
     }
 
-    var btnFrame = btn.bounds();
+    var btnFrame = btn.bounds();1
     if (this._valign()) {
       btn.setFrameOrigin(NSMakePoint(x, y));
     } else {

@@ -22,7 +22,8 @@
     "gulp-jasmine-node": "^1.0.7",
     "gulp-run": "^1.7.1",
     "gulp-watch": "^4.3.11",
-    "jasmine": "^2.6.0"
+    "jasmine": "^2.6.0",
+    "uuid": "^3.0.1"
   },
   "dependencies": {
     "text-encoding": "^0.6.4",

@@ -18,6 +18,6 @@ gulp.task('build', () =>
     .pipe(gulp.dest(`${DIST_FOLDER}`))
 );
 
-gulp.task('watch', ['build'],  () =>
+gulp.task('watch', ['test', 'build'],  () =>
   watch([`${PLUGIN_FOLDER}/*.js`, 'spec/**/*.js'], () => gulp.start('build'))
 );

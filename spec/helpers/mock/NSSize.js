@@ -1,10 +1,10 @@
-NSsize = class NSsize {
-  constructor(w, h) {
-    this.w = w;
-    this.h = h;
+NSSize = class NSSize {
+  constructor(width, height) {
+    this.width = width;
+    this.height = height;
   }
 }
 
 NSMakeSize = (w, h) => {
-  return new NSsize(w, h);
+  return new NSSize(w, h);
 };

@@ -1,12 +1,16 @@
+require("./NSPoint");
+require("./NSSize");
+
 NSRect = class NSRect {
-  constructor(x, y, w, h) {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
+  constructor(origin, size) {
+    this.origin = origin;
+    this.size = size;
   }
 }
 
 NSMakeRect = (x, y, w, h) => {
-  return new NSRect(x, y, w, h);
+  return new NSRect(new NSPoint(x, y), new NSSize(w, h));
 };
+
+NSWidth = (r) => r.size.width;
+NSHeight = (r) => r.size.height;

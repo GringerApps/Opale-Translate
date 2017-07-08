@@ -22,6 +22,10 @@ class I18nGoParser {
 }
 
 class ExcelParser {
+  constructor(parseHeader = true) {
+    this._parserHeader = parseHeader;
+  }
+
   get encoding() {
     return NSISOLatin1StringEncoding;
   }
@@ -34,12 +38,12 @@ class ExcelParser {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const headers = translations[0];
+      const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
       for (let i = 1; i < headers.length; i++) {
         const language = headers[i];
         result[language] = {};
       }
-      for (let i = 1; i < translations.length; i++) {
+      for (let i = 0; i < translations.length; i++) {
         const mapping = translations[i];
         for (let j = 1; j < mapping.length; j++) {
           const language = headers[j];

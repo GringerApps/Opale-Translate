@@ -1,3 +1,5 @@
+const Window = require("./Window");
+
 class AlertWindow {
   constructor(title) {
     const window = COSAlertWindow.new();

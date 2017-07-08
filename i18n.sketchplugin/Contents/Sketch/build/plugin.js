@@ -1,4 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+const Window = require("./Window");
+
 class AlertWindow {
   constructor(title) {
     const window = COSAlertWindow.new();
@@ -17,7 +19,7 @@ class AlertWindow {
 
 module.exports = AlertWindow;
 
-},{}],2:[function(require,module,exports){
+},{"./Window":8}],2:[function(require,module,exports){
 class Delegator {
   constructor(selectorHandlerDict, superclass) {
     this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
@@ -79,13 +81,21 @@ module.exports = Delegator;
 const Delegator = require("./Delegator");
 
 class DropdownButton {
-  static get LABEL_HALIGN() { return 0; }
-  static get LABEL_VALIGN() { return 1; }
-  static get LABEL_TEXTALIGN_LEFT() { return 0; }
-  static get LABEL_TEXTALIGN_RIGHT() { return 1; }
+  static get ALIGNMENT() {
+    return {
+      HORIZONTAL: 0,
+      VERTICAL: 1
+    };
+  }
+  static get TEXT_ALIGNMENT() {
+    return {
+      LEFT: 0,
+      RIGHT: 1
+    };
+  }
 
   constructor(pullsDown = false) {
-    const FRAME = NSMakeRect(20.0, 20.0, 170.0, 25);
+    const FRAME = NSMakeRect(0, 0, 160.0, 22);
 
     const self = this;
     const NSPopUpButtonDelegator = new Delegator({
@@ -102,10 +112,10 @@ class DropdownButton {
     this._selectionChangedCallback = () => {};
     this._btn = popupBtn;
     this._label = {
-      alignment: DropdownButton.LABEL_HALIGN,
+      alignment: DropdownButton.ALIGNMENT.HORIZONTAL,
       title: null,
-      text_alignment:DropdownButton.LABEL_TEXTALIGN_LEFT
-    }
+      text_alignment:DropdownButton.TEXT_ALIGNMENT.LEFT
+    };
   }
 
   _selectionChanged() {
@@ -119,11 +129,12 @@ class DropdownButton {
   }
 
   _valign() {
-    return this._label.alignment === DropdownButton.LABEL_VALIGN;
+    return this._label.alignment === DropdownButton.ALIGNMENT.VERTICAL;
   }
 
   onSelectionChanged(callback) {
     this._selectionChangedCallback = callback;
+    return this;
   }
 
   setLabel(title, alignment, text_alignment) {
@@ -134,19 +145,22 @@ class DropdownButton {
       this._label.text_alignment = text_alignment;
     }
     this._label.title = title;
+    return this;
   }
 
   addItem(title) {
     this._btn.addItemWithTitle(title);
+    return this;
   }
 
   addItems(titles) {
     this._btn.addItemsWithTitles(titles);
+    return this;
   }
 
   addToWindow(window) {
     const btn = this._btn;
-    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 60) : NSMakeRect(0, 0, 300, 30);
+    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 37) : NSMakeRect(0, 0, 300, 23);
     const view = NSView.alloc().initWithFrame(frame);
 
     let x = 0;
@@ -155,7 +169,7 @@ class DropdownButton {
     let tf;
 
     if (this._hasLabel()) {
-      const tfFrame = NSMakeRect(x, y, 130, 20);
+      const tfFrame = NSMakeRect(x, y, 140, 16);
       tf = NSTextField.alloc().initWithFrame(tfFrame);
       tf.setDrawsBackground(false);
       tf.setEditable(false);
@@ -163,6 +177,7 @@ class DropdownButton {
       tf.setSelectable(true);
       tf.setStringValue(this._label.title);
       tf.setAlignment(this._label.text_alignment);
+      tf.setFont(NSFont.systemFontOfSize(11.5));
 
       if(this._valign()) {
         y += NSHeight(tfFrame);
@@ -175,7 +190,7 @@ class DropdownButton {
       view.addSubview(tf);
     }
 
-    var btnFrame = btn.bounds();
+    var btnFrame = btn.bounds();1
     if (this._valign()) {
       btn.setFrameOrigin(NSMakePoint(x, y));
     } else {
@@ -197,7 +212,7 @@ class FilePicker {
     const panel = NSOpenPanel.openPanel();
     panel.setCanChooseFiles(true);
     panel.setCanChooseDirectories(false);
-    panel.setAllowsMultipleSelection(true);
+    panel.setAllowsMultipleSelection(false);
 
     this.panel = panel;
     this.modalResult = NSFileHandlingPanelCancelButton;
@@ -214,31 +229,91 @@ class FilePicker {
   files() {
     return this.panel.filenames();
   }
-
-  read(encoding) {
-    if (encoding === undefined) {
-      encoding = NSUTF8StringEncoding;
-    }
-
-    const result = {};
-    if (!this.choseFiles()) {
-      return result;
-    }
-    const filenames = this.panel.filenames();
-    for (let i = 0; i < filenames.length; i++) {
-      const fullpath = filenames[i];
-
-      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
-      const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
-      result[filename] = content;
-    }
-    return result;
-  }
 }
 
 module.exports = FilePicker;
 
 },{}],5:[function(require,module,exports){
+const FilePicker = require("./FilePicker");
+const Delegator = require("./Delegator");
+
+const DEFAULT_BUTTON_TITLE = "Select file";
+
+class FilePickerButton {
+  constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
+    const self = this;
+    const FILE_PICKER_DELEGATOR = new Delegator({
+      "callback": () => self._onClick()
+    });
+    const target = FILE_PICKER_DELEGATOR.getClassInstance();
+    const button = NSButton.buttonWithTitle_target_action_(buttonTitle, target, "callback");
+    button.setHighlighted(true);
+
+    const labelFrame = NSMakeRect(0, 0, 180, 20);
+    const label = NSTextField.alloc().initWithFrame(labelFrame);
+    label.setDrawsBackground(false);
+    label.setEditable(false);
+    label.setBezeled(false);
+    label.setSelectable(true);
+    label.setStringValue(labelText);
+
+    this._label = label;
+    this._button = button;
+    this._onFileSelected = () => {};
+  }
+
+  _onClick() {
+    const picker = new FilePicker();
+    picker.show();
+    const files = picker.files();
+    this._button.setTitle("Replace file");
+    this._button.setFrameSize(NSMakeSize(200, this._button.frame().size.height));
+    this._label.setStringValue('Spreadsheet: ' + filename);
+    this._onFileSelected(files);
+  }
+
+  setLabel(label) {
+    this._label.setStringValue(label);
+  }
+
+  onFileSelected(callback) {
+    this._onFileSelected = callback;
+  }
+
+  addToWindow(window) {
+    const view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 400, 30));
+    const button = this._button;
+    const label = this._label;
+
+    const viewFrame = view.frame();
+    const buttonFrame = button.frame();
+    const labelFrame = button.frame();
+
+    const buttonOrigin = NSMakePoint(
+      labelFrame.origin.x + labelFrame.size.width,
+      (NSHeight(viewFrame) - NSHeight(buttonFrame)) / 2
+    );
+    button.setFrameOrigin(buttonOrigin);
+    button.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+
+    const labelOrigin = NSMakePoint(
+      labelFrame.origin.x,
+      (NSHeight(viewFrame) - NSHeight(labelFrame)) / 2
+    );
+    label.setFrameOrigin(labelOrigin);
+    label.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
+
+    view.addSubview(label);
+    view.addSubview(button);
+
+    window.addAccessoryView(view);
+  }
+}
+
+module.exports = FilePickerButton;
+
+},{"./Delegator":2,"./FilePicker":4}],6:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -325,7 +400,7 @@ class Iterator {
 
 module.exports = Iterator;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 const XLSX = require("xlsx");
 const { TextEncoder } = require("text-encoding");
 
@@ -350,6 +425,10 @@ class I18nGoParser {
 }
 
 class ExcelParser {
+  constructor(parseHeader = true) {
+    this._parserHeader = parseHeader;
+  }
+
   get encoding() {
     return NSISOLatin1StringEncoding;
   }
@@ -362,12 +441,12 @@ class ExcelParser {
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const headers = translations[0];
+      const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
       for (let i = 1; i < headers.length; i++) {
         const language = headers[i];
         result[language] = {};
       }
-      for (let i = 1; i < translations.length; i++) {
+      for (let i = 0; i < translations.length; i++) {
         const mapping = translations[i];
         for (let j = 1; j < mapping.length; j++) {
           const language = headers[j];
@@ -386,9 +465,12 @@ module.exports = {
   ExcelParser
 };
 
-},{"text-encoding":14,"xlsx":19}],7:[function(require,module,exports){
+},{"text-encoding":17,"xlsx":22}],8:[function(require,module,exports){
+ const { scaleFrame } = require("./viewhelper");
+
  class Window {
-   constructor({x , y, w, h} = { x: 0, y: 0, w: 300, h: 1}) {
+   constructor() {
+     const x = 0, y = 0, w = 500, h = 300;
      this._views = []
      this._frame = NSMakeRect(x, y, w, h);
      this._alert = NSAlert.new();
@@ -420,28 +502,11 @@ module.exports = {
     }
 
     sup.setFrame(viewFrame);
-
-
     this._alert.setAccessoryView(sup);
   }
 
   addAccessoryView(view) {
     this._views.push(view);
-  }
-
-  addTextLabelWithValue(value) {
-    const tf = NSTextField.alloc().initWithFrame(NSMakeRect(0, 0, 300, 16));
-
-    tf.setDrawsBackground(false);
-    tf.setEditable(false);
-    tf.setBezeled(false);
-    tf.setSelectable(true);
-
-    if (value) {
-        tf.setStringValue(value);
-    }
-
-    this.addAccessoryView(tf);
   }
 
   setMessageText(messageText) {
@@ -460,17 +525,18 @@ module.exports = {
     return this._alert.informativeText;
   }
 
-  addTextFieldWithValue(value) {
-    const tf = NSTextField.alloc.initWithFrame(NSMakeRect(0, 0, 300, 24));
-
-    if (value) {
-        tf.setStringValue(value);
-    }
-
-    this.addAccessoryView(tf);
+  addButtonWithTitle(title) {
+    this._alert.addButtonWithTitle(title);
+    return this;
   }
 
+  buttons() {
+    return this._alert.buttons();
+  }
 
+  close() {
+    NSApp.endSheet(this._alert.window());
+  }
 
   runModal() {
     this._layout();
@@ -481,11 +547,18 @@ module.exports = {
 
 module.exports = Window;
 
-},{}],8:[function(require,module,exports){
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+},{"./viewhelper":11}],9:[function(require,module,exports){
+module.exports = {
+  TITLE: "Opal Translate",
+  MESSAGES: {
+    WRONG_SELECTION: "Only Artboards can be translated by this plugin",
+    EMPTY_SELECTION: "Please select an artboard to be translated",
+    NO_FILE_SELECTED: "Please select at least a translation file",
+  },
+  SCALE_FACTOR: 0.5
+};
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
+},{}],10:[function(require,module,exports){
 var Iterator = require("./Iterator");
 
 var _require = require("./Parsers"),
@@ -493,30 +566,28 @@ var _require = require("./Parsers"),
     ExcelParser = _require.ExcelParser;
 
 var AlertWindow = require("./AlertWindow");
-var FilePicker = require("./FilePicker");
+var FilePickerButton = require("./FilePickerButton");
 var Delegator = require("./Delegator");
 var Window = require("./Window");
 var DropdownButton = require("./DropdownButton");
 
-var CONSTANTS = {
-  TITLE: "Opal Translate",
-  MESSAGES: {
-    WRONG_SELECTION: "Only Artboards can be translated by this plugin",
-    EMPTY_SELECTION: "Please select an artboard to be translated",
-    NO_FILE_SELECTED: "Please select at least a translation file"
-  }
-};
+var _require2 = require("./viewhelper"),
+    scaleFrame = _require2.scaleFrame;
 
-translate = function translate(context) {
-  var parser = new ExcelParser();
-  var ALERT = new AlertWindow(CONSTANTS.TITLE);
+var _require3 = require("./consts"),
+    TITLE = _require3.TITLE,
+    MESSAGES = _require3.MESSAGES;
+
+var ALERT = new AlertWindow(TITLE);
+
+var verifySelection = function verifySelection(context) {
   var api = context.api();
   var selectedLayers = api.selectedDocument.selectedLayers;
   var selection = new Iterator(selectedLayers);
 
   if (selection.count() == 0) {
-    ALERT.show(CONSTANTS.MESSAGES.EMPTY_SELECTION);
-    return;
+    ALERT.show(MESSAGES.EMPTY_SELECTION);
+    return false;
   }
 
   var artboards = selection.filter(function (layer) {
@@ -524,152 +595,193 @@ translate = function translate(context) {
   });
 
   if (artboards.count() != selection.count()) {
-    ALERT.show(CONSTANTS.MESSAGES.WRONG_SELECTION);
-    return;
+    ALERT.show(MESSAGES.WRONG_SELECTION);
+    return false;
   }
 
-  var window = new Window({ x: 0, y: 0, w: 400, h: 1 });
-
-  var btn = new FilePickerBtn("Select a spreadsheet");
-  btn.addToWindow(window);
-
-  var frame = NSMakeRect(0, 0, 300, 160);
-  var url = api.resourceNamed("grid.png");
-  var image = NSImage.alloc().initWithContentsOfURL(url);
-  var imgView = NSImageView.alloc().initWithFrame(frame);
-  imgView.setImage(image);
-  imgView.setImageAlignment(2);
-  imgView.setImageScaling(0);
-  window.addAccessoryView(imgView);
-
-  var applyToSelector = new DropdownButton("grid.png");
-
-  applyToSelector.setLabel("Apply to:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  applyToSelector.addItems(["Selected artboards", "Artboards in current page"]);
-  applyToSelector.onSelectionChanged(function (a, b) {
-    log(a);log(b);
-  });
-  applyToSelector.addToWindow(window);
-
-  var newArtboardToSelector = new DropdownButton();
-  newArtboardToSelector.setLabel("New artboard to the:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  newArtboardToSelector.addItems(["Right", "Bottom"]);
-  newArtboardToSelector.onSelectionChanged(function (a, b) {
-    log(a);log(b);
-  });
-  newArtboardToSelector.addToWindow(window);
-
-  var caseMatchingSelector = new DropdownButton();
-  caseMatchingSelector.setLabel("Case matching:", DropdownButton.LABEL_HALIGN, DropdownButton.LABEL_TEXTALIGN_RIGHT);
-  caseMatchingSelector.addItems(["Case incensitive", "Case sensitive"]);
-  caseMatchingSelector.onSelectionChanged(function (a, b) {
-    log(a);log(b);
-  });
-  caseMatchingSelector.addToWindow(window);
-  window.setMessageText("Geode Translate");
-  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
-
-  alert = window.runModal();
-
-  var translatedContent = parser.parse(fileSelectButton.files());
-
-  artboards.forEach(function (layer) {
-    var _loop = function _loop(key) {
-      var translations = translatedContent[key];
-
-      var duplicatedLayer = layer.duplicate();
-      duplicatedLayer.name = duplicatedLayer.name + "-" + key;
-
-      var iterator = new Iterator([duplicatedLayer]);
-      var texts = iterator.filter(function (layer) {
-        return layer.isText;
-      }, true);
-      texts.forEach(function (layer) {
-        var text = layer.text;
-        var translation = translations[text] || text;
-        layer.text = translation;
-      });
-    };
-
-    for (var key in translatedContent) {
-      _loop(key);
-    }
-  });
+  return true;
 };
 
-var FILE_PICKER_DELEGATOR = new Delegator({
-  "pickFile": function pickFile() {
-    var fileReader = new FilePicker();
-    fileReader.show();
-
-    var fp = new FilePicker();
-    fp.show();
-    undefined._files = fp.files();
+var OPTIONS = {
+  APPLY_TO: {
+    SELECTED_ARTBOARDS: 0
   },
-  "files": function files() {
-    return undefined._files || [];
+  ADD_ARTBOARD_TO: {
+    THE_RIGHT: 0
+  },
+  CASE_MATCHING: {
+    SENSITIVE: 0
   }
-});
+};
 
-var FilePickerBtn = function () {
-  function FilePickerBtn(label) {
-    _classCallCheck(this, FilePickerBtn);
+var BTN_CLICKED = {
+  TRANSLATE: 1000,
+  CANCEL: 1001
+};
 
-    var target = FILE_PICKER_DELEGATOR.getClassInstance();
-    var btn = NSButton.buttonWithTitle_target_action_("Select file", target, "pickFile");
-    btn.setHighlighted(true);
+var buildView = function buildView(context, state) {
+  var window = new Window();
+  window.setMessageText("Opale");
+  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
 
-    this._btn = btn;
-    this._label = label || null;
-  }
-
-  _createClass(FilePickerBtn, [{
-    key: "files",
-    value: function files() {
-      return this.target.files();
+  var fileSelectButton = new FilePickerButton("Select a spreadsheet");
+  fileSelectButton.onFileSelected(function (files) {
+    var result = {};
+    if (files.length < 1) {
+      return result;
     }
-  }, {
-    key: "addToWindow",
-    value: function addToWindow(window) {
-      var btn = this._btn;
-      var tf = void 0;
-      var view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 300, 30));
-      var tfFrame = NSMakeRect(0, 0, 130, 20);
+    var filename = String(files[0]).split('\\').pop().split('/').pop();
+    fileSelectButton.setLabel('Spreadsheet: ' + filename);
+    for (var i = 0; i < files.length; i++) {
+      var fullpath = files[i];
 
-      if (this._label) {
-        tf = NSTextField.alloc().initWithFrame(tfFrame);
-        tf.setDrawsBackground(false);
-        tf.setEditable(false);
-        tf.setBezeled(false);
-        tf.setSelectable(true);
-        tf.setStringValue(this._label);
-      }
-
-      var btnFrame = btn.bounds();
-
-      var btnOrigin = NSMakePoint(tfFrame.origin.x + tfFrame.size.width, (NSHeight(view.bounds()) - NSHeight(btnFrame)) / 2);
-
-      btn.setFrameOrigin(btnOrigin);
-      btn.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-      if (tf != null) {
-        var tfOrigin = NSMakePoint(tf.frame().origin.x, (NSHeight(view.bounds()) - NSHeight(tf.bounds())) / 2);
-
-        tf.setFrameOrigin(tfOrigin);
-        tf.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-        view.addSubview(tf);
-      }
-
-      view.addSubview(btn);
-
-      window.addAccessoryView(view);
+      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
+      var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
+      result[_filename] = content;
+      state.content = result;
     }
-  }]);
+  });
 
-  return FilePickerBtn;
-}();
-},{"./AlertWindow":1,"./Delegator":2,"./DropdownButton":3,"./FilePicker":4,"./Iterator":5,"./Parsers":6,"./Window":7}],9:[function(require,module,exports){
+  fileSelectButton.addToWindow(window);
+
+  var preview = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 480, 180));
+  var gridUrl = api.resourceNamed("grid.png");
+  var gridSuffixUrl = api.resourceNamed("grid_suffix.png");
+  var gridImage = NSImage.alloc().initWithContentsOfURL(gridUrl);
+  var gridSuffixImage = NSImage.alloc().initWithContentsOfURL(gridSuffixUrl);
+  var imgView = NSImageView.alloc().init();
+  imgView.setImage(gridImage);
+  imgView.setImageAlignment(2);
+  imgView.setImageScaling(0);
+  imgView.setTranslatesAutoresizingMaskIntoConstraints(false);
+
+  var NSButtonDelegator = new Delegator({
+    callback: function callback() {
+      imgView.setImage(checkBox.state() == NSOnState ? gridSuffixImage : gridImage);
+      state.firstRowForSuffix = checkBox.state() == NSOnState;
+    }
+  });
+  var delegator = NSButtonDelegator.getClassInstance();
+  var checkBox = NSButton.alloc().init();
+  checkBox.setTarget(delegator);
+  checkBox.setAction("callback");
+  checkBox.setTitle("Use first row for\nartboard suffixes");
+  checkBox.setButtonType(NSSwitchButton);
+  checkBox.setTranslatesAutoresizingMaskIntoConstraints(false);
+
+  var previewSubviews = {
+    img: imgView,
+    checkBox: checkBox
+  };
+  preview.addSubview(imgView);
+  preview.addSubview(checkBox);
+  var previewHConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("H:|-0-[img(348)]-[checkBox]->=0-|", 0, null, previewSubviews);
+  var previewVImgConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-0-[img(180)]->=0-|", 0, null, previewSubviews);
+  var previewVCheckBoxConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-7-[checkBox]->=0-|", 0, null, previewSubviews);
+  preview.addConstraints(previewHConstraints);
+  preview.addConstraints(previewVCheckBoxConstraints);
+  preview.addConstraints(previewVImgConstraints);
+
+  window.addAccessoryView(preview);
+
+  new DropdownButton().setLabel("Apply to:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Selected artboards"]).onSelectionChanged(function (idx) {
+    state.applyTo = idx;
+  }).addToWindow(window);
+
+  new DropdownButton().setLabel("New artboards to the:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Right"]).onSelectionChanged(function () {
+    state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
+  }).addToWindow(window);
+
+  new DropdownButton().setLabel("Case matching:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Case sensitive"]).onSelectionChanged(function () {
+    state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
+  }).addToWindow(window);
+
+  window.addButtonWithTitle("Replace text");
+  window.addButtonWithTitle("Cancel");
+
+  var btns = window.buttons();
+  var replaceBtn = btns[0];
+  var ReplaceButtonDelegator = new Delegator({
+    callback: function callback() {
+      if (verifySelection(context)) {
+        var selectedLayers = api.selectedDocument.selectedLayers;
+        var selection = new Iterator(selectedLayers);
+        var artboards = selection.filter(function (layer) {
+          return layer.isArtboard;
+        });
+        var parser = new ExcelParser(state.firstRowForSuffix);
+        var translatedContent = parser.parse(state.content);
+        artboards.forEach(function (layer) {
+          var frame = layer.frame;
+
+          var _loop = function _loop(key) {
+            var translations = translatedContent[key];
+            var duplicatedLayer = layer.duplicate();
+            frame.offset(frame.width + 20, 0);
+            duplicatedLayer.frame = frame;
+            duplicatedLayer.name = duplicatedLayer.name + "-" + key;
+            var iterator = new Iterator([duplicatedLayer]);
+            var texts = iterator.filter(function (layer) {
+              return layer.isText;
+            }, true);
+            texts.forEach(function (layer) {
+              var text = String(layer.text);
+              var translation = translations[text] || text;
+              layer.text = translation;
+            });
+          };
+
+          for (var key in translatedContent) {
+            _loop(key);
+          }
+        });
+      }
+    }
+  });
+  var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+  replaceBtn.setTarget(replaceDelegator);
+  replaceBtn.setAction("callback");
+  replaceBtn.setHighlighted(true);
+
+  var CancelButtonDelegator = new Delegator({
+    callback: function callback() {
+      window.close();
+    }
+  });
+  var cancelDelegator = CancelButtonDelegator.getClassInstance();
+  var cancelBtn = btns[1];
+  cancelBtn.setTarget(cancelDelegator);
+  cancelBtn.setAction("callback");
+  cancelBtn.setHighlighted(false);
+
+  return window;
+};
+
+translate = function translate(context) {
+  var api = context.api();
+  var state = {
+    applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+    addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+    caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+    firstRowForSuffix: false,
+    content: {}
+  };
+
+  window.runModal();
+};
+},{"./AlertWindow":1,"./Delegator":2,"./DropdownButton":3,"./FilePickerButton":5,"./Iterator":6,"./Parsers":7,"./Window":8,"./consts":9,"./viewhelper":11}],11:[function(require,module,exports){
+const { SCALE_FACTOR } = require("./consts");
+
+const scaleFrame = (frame) => {
+  const origin = frame.origin;
+  const size = frame.size;
+  return NSMakeRect(origin.x * SCALE_FACTOR, origin.y * SCALE_FACTOR, size.width * SCALE_FACTOR, size.height * SCALE_FACTOR); 
+};
+
+module.exports = {
+  scaleFrame
+};
+},{"./consts":9}],12:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -795,9 +907,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],10:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -1908,7 +2020,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":9,"ieee754":13}],12:[function(require,module,exports){
+},{"base64-js":12,"ieee754":16}],15:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1973,7 +2085,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],13:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -2059,7 +2171,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],14:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -2070,7 +2182,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":16}],15:[function(require,module,exports){
+},{"./lib/encoding.js":19}],18:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -2118,7 +2230,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5432,7 +5544,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":15}],17:[function(require,module,exports){
+},{"./encoding-indexes.js":18}],20:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -6761,7 +6873,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":11}],18:[function(require,module,exports){
+},{"buffer":14}],21:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15753,7 +15865,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":11}],19:[function(require,module,exports){
+},{"buffer":14}],22:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -33536,4 +33648,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":17,"./jszip.js":18,"buffer":11,"crypto":10,"fs":10,"km4Umf":12,"stream":10}]},{},[8])
+},{"./dist/cpexcel.js":20,"./jszip.js":21,"buffer":14,"crypto":13,"fs":13,"km4Umf":15,"stream":13}]},{},[10])
