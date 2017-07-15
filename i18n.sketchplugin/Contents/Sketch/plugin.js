@@ -1,128 +1,133 @@
-var Iterator = require("./Iterator");
-var { I18nGoParser, ExcelParser } = require("./Parser");
+const Iterator = require('./Iterator');
+const { ExcelParser } = require('./Parsers');
+const AlertWindow = require('./AlertWindow');
+const FilePickerButton = require('./FilePickerButton');
+const Delegator = require('./Delegator');
+const Window = require('./Window');
+const { TITLE, MESSAGES } = require('./consts');
+const View = require('./View');
+const Button = require('./Button');
 
-var CONSTANTS = {
-  TITLE: "Sketch i18n",
-  MESSAGES: {
-    WRONG_SELECTION: "Only Artboards can be translated by this plugin",
-    EMPTY_SELECTION: "Please select an artboard to be translated",
-    NO_FILE_SELECTED: "Please select at least a translation file",
-  }
-};
-
-var translate = function (context, parser) {
-  var ALERT = new AlertWindow(CONSTANTS.TITLE);
-  var selectedLayers = context.api().selectedDocument.selectedLayers;
-  var selection = new Iterator(selectedLayers);
+const ALERT = new AlertWindow(TITLE);
+const verifySelection = (api) => {
+  const selectedLayers = api.selectedDocument.selectedLayers;
+  const selection = new Iterator(selectedLayers);
 
   if (selection.count() == 0) {
-    ALERT.show(CONSTANTS.MESSAGES.EMPTY_SELECTION);
-    return;
+    ALERT.show(MESSAGES.EMPTY_SELECTION);
+    return false;
   }
 
-  var artboards = selection.filter(function (layer) {
-    return layer.isArtboard;
-  });
+  const artboards = selection.filter((layer) => layer.isArtboard);
 
   if (artboards.count() != selection.count()) {
-    ALERT.show(CONSTANTS.MESSAGES.WRONG_SELECTION);
-    return;
+    ALERT.show(MESSAGES.WRONG_SELECTION);
+    return false;
   }
 
-  var fileReader = new FilePicker();
-  fileReader.show();
-  if (!fileReader.choseFiles()) {
-    ALERT.show(CONSTANTS.MESSAGES.NO_FILE_SELECTED);
-    return;
-  }
-  var content = fileReader.read(parser.encoding);
-
-  var translatedContent = parser.parse(content);
-
-  artboards.forEach(function (layer) {
-    for (var key in translatedContent) {
-      var translations = translatedContent[key];
-
-      var duplicatedLayer = layer.duplicate();
-      duplicatedLayer.name = duplicatedLayer.name + "-" + key;
-
-      var iterator = new Iterator([duplicatedLayer]);
-      var texts = iterator.filter(function (layer) {
-        return layer.isText;
-      }, true);
-      texts.forEach(function (layer) {
-        var text = layer.text;
-        var translation = translations[text] || text;
-        layer.text = translation;
-      });
-    }
-  });
+  return true;
 };
 
-var FilePicker = function () {
-  var panel = NSOpenPanel.openPanel();
-  panel.setCanChooseFiles(true);
-  panel.setCanChooseDirectories(false);
-  panel.setAllowsMultipleSelection(true);
+const translateTexts = (api, state, window) => {
+  if(verifySelection(api)) {
+    const selectedLayers = api.selectedDocument.selectedLayers;
+    const selection = new Iterator(selectedLayers);
+    const artboards = selection.filter((layer) => layer.isArtboard);
+    const parser = new ExcelParser(state.firstRowForSuffix);
+    const translatedContent = parser.parse(state.content);
+    artboards.forEach((layer) => {
+      const frame = layer.frame;
+      for (const key in translatedContent) {
+        const translations = translatedContent[key];
+        const duplicatedLayer = layer.duplicate();
+        frame.offset(frame.width + 20, 0);
+        duplicatedLayer.frame = frame;
+        duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+        const iterator = new Iterator([duplicatedLayer]);
+        const texts = iterator.filter((layer) => layer.isText, true);
+        texts.forEach((layer) => {
+          const text = String(layer.text);
+          const translation = translations[text] || text;
+          layer.text = translation;
+        });
+      }
+    });
+    window.close();
+  }
+};
 
-  var files = [];
-  var modelResult = NSCancelButton;
+const OPTIONS = {
+  APPLY_TO: {
+    SELECTED_ARTBOARDS: 0
+  },
+  ADD_ARTBOARD_TO: {
+    THE_RIGHT: 0
+  },
+  CASE_MATCHING: {
+    SENSITIVE: 0
+  }
+};
 
-  var show = function () {
-    modelResult = panel.runModal();
-  };
+const buildView = (context, state) => {
+  const api = context.api();
+  const window = new Window();
+  window.setMessageText('Opale');
+  window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
 
-  var choseFiles = function () {
-    return modelResult == NSOKButton && panel.filenames().length != 0;
-  };
-
-  var read = function (encoding) {
-    if (encoding === undefined) {
-      encoding = NSUTF8StringEncoding;
-    }
-
-    var result = {};
-    if (!choseFiles()) {
+  const fileSelectButton = new FilePickerButton('Select a spreadsheet');
+  fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+  fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
+  fileSelectButton.onFileSelected((files) => {
+    const result = {};
+    if (files.length < 1) {
       return result;
     }
-    var filenames = panel.filenames();
-    for (i = 0; i < filenames.length; i++) {
-      var fullpath = filenames[i];
+    const filename = String(files[0]).split('\\').pop().split('/').pop();
+    fileSelectButton.setLabel('Spreadsheet: ' + filename);
+    for (let i = 0; i < files.length; i++) {
+      const fullpath = files[i];
 
-      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
-      var filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
+      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+      const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
       result[filename] = content;
+      state.content = result;
     }
-    return result;
-  };
+  });
 
-  return {
-    choseFiles: choseFiles,
-    show: show,
-    read: read
-  };
+  window.addAccessoryView(fileSelectButton.nativeView);
+  window.addButtonWithTitle('Replace text');
+  window.addButtonWithTitle('Cancel');
+
+  const btns = window.buttons();
+  const replaceBtn = btns[0];
+  const ReplaceButtonDelegator = new Delegator({ callback: () => translateTexts(api, state, window) });
+  const replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+  replaceBtn.setTarget(replaceDelegator);
+  replaceBtn.setAction('callback');
+  replaceBtn.setHighlighted(true);
+
+  const CancelButtonDelegator = new Delegator({ callback: () => window.close() });
+  const cancelDelegator = CancelButtonDelegator.getClassInstance();
+  const cancelBtn = btns[1];
+  cancelBtn.setTarget(cancelDelegator);
+  cancelBtn.setAction('callback');
+  cancelBtn.setHighlighted(false);
+
+  const btn = new Button('test');
+  btns.push(btn);
+
+  return window;
 };
 
-var AlertWindow = function (title) {
-  var window = COSAlertWindow.new();
-
-  window.setMessageText(title);
-  window.addButtonWithTitle("OK");
-
-  var show = function (message) {
-    window.setInformativeText(message);
-    window.runModal();
-  }
-
-  return {
-    show: show
+translate = (context) => {
+  const state = {
+    applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+    addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+    caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+    firstRowForSuffix: false,
+    content: {}
   };
-};
 
-translateFromJSONGo = function (context) {
-  translate(context, new I18nGoParser());
-};
-
-translateFromExcel = function (context) {
-  translate(context, new ExcelParser());
+  const window = buildView(context, state);
+  window.runModal();
 };
