@@ -790,6 +790,7 @@ var TextReplacer = function () {
           result[_filename] = content;
           replacer.content = result;
         }
+        replaceBtn.setEnabled(true);
       });
 
       window.addAccessoryView(fileSelectButton.nativeView);
@@ -856,6 +857,7 @@ var TextReplacer = function () {
       var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
       replaceBtn.setTarget(replaceDelegator);
       replaceBtn.setAction('callback');
+      replaceBtn.setEnabled(false);
       replaceBtn.setHighlighted(true);
 
       var CancelButtonDelegator = new Delegator({ callback: function callback() {

@@ -100,6 +100,7 @@ class TextReplacer {
         result[filename] = content;
         replacer.content = result;
       }
+      replaceBtn.setEnabled(true);
     });
 
     window.addAccessoryView(fileSelectButton.nativeView);
@@ -164,6 +165,7 @@ class TextReplacer {
     const replaceDelegator = ReplaceButtonDelegator.getClassInstance();
     replaceBtn.setTarget(replaceDelegator);
     replaceBtn.setAction('callback');
+    replaceBtn.setEnabled(false);
     replaceBtn.setHighlighted(true);
 
     const CancelButtonDelegator = new Delegator({ callback: () => window.close() });
