@@ -9,7 +9,7 @@ describe('FilePicker', function() {
     it('sets the properties of the NSOpenPanel', () => {
       new FilePicker();
 
-      const openPanel = NSOpenPanel.instance();
+      const openPanel = NSOpenPanel.instances()[0];
 
       expect(openPanel._canChooseFiles).toEqual(true);
       expect(openPanel._canChooseDirectories).toEqual(false);
@@ -21,7 +21,7 @@ describe('FilePicker', function() {
     it('should run the modal', () => {
       const picker = new FilePicker();
 
-      const openPanel = NSOpenPanel.instance();
+      const openPanel = NSOpenPanel.instances()[0];
       openPanel._result = NSFileHandlingPanelOKButton;
 
       const result = picker.show();
@@ -36,7 +36,7 @@ describe('FilePicker', function() {
       it('it returns false', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
 
         expect(picker.choseFiles()).toEqual(false);
@@ -47,7 +47,7 @@ describe('FilePicker', function() {
       it('it returns true', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
         openPanel._filenames.push('./test.xslx');
 
@@ -61,7 +61,7 @@ describe('FilePicker', function() {
       it('it returns false', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelCancelButton;
 
         picker.show();
@@ -76,7 +76,7 @@ describe('FilePicker', function() {
       it('it returns []]', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
 
         expect(picker.files()).toEqual([]);
@@ -87,7 +87,7 @@ describe('FilePicker', function() {
       it('it returns an array containing the selected file', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
         openPanel._filenames.push('./test.xslx');
 
@@ -101,7 +101,7 @@ describe('FilePicker', function() {
       it('it returns []', () => {
         const picker = new FilePicker();
 
-        const openPanel = NSOpenPanel.instance();
+        const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelCancelButton;
 
         picker.show();

@@ -5,6 +5,7 @@ NSButton = class NSButton extends NSView {
     super();
     this._title = null;
     this._highlighted = false;
+    this._state = NSOffState;
   }
 
   setHighlighted(highlighted) {
@@ -18,7 +19,16 @@ NSButton = class NSButton extends NSView {
   setButtonType(buttonType) {
     this._buttonType = buttonType;
   }
+
   setBezelStyle(bezelStyle) {
     this._bezelStyle = bezelStyle;
+  }
+
+  setState(state) {
+    this._state = state;
+  }
+
+  state() {
+    return this._state;
   }
 };

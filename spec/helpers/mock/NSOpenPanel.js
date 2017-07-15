@@ -2,7 +2,7 @@ require('./NSObject');
 
 NSOpenPanel = class NSOpenPanel extends NSObject {
   static openPanel() {
-    return this.instance();
+    return this.alloc();
   }
 
   constructor() {

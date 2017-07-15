@@ -1,6 +1,7 @@
 describe('View', function() {
   const View = require('../i18n.sketchplugin/Contents/Sketch/View');
   const { VisualConstraint, RelativeConstraint } = require('./helpers/mock/NSLayoutConstraint');
+
   beforeEach(() => {
     NSView.reset();
     NSButton.reset();
@@ -19,14 +20,14 @@ describe('View', function() {
     it('should return the native view', () => {
       const view = new View();
       const nativeView = view.nativeView;
-      const viewSingleton = NSView.instance();
+      const viewSingleton = NSView.instances()[0];
 
       expect(nativeView).toEqual(viewSingleton);
     });
 
     describe('when passing a view to the constructor', () => {
       it('should return the given view', () => {
-        const button = NSButton.instance();
+        const button = NSButton.alloc();
         const view = new View(button);
         const nativeView = view.nativeView;
 
@@ -48,7 +49,7 @@ describe('View', function() {
 
   describe ('addSubview', () => {
     it('adds a subview', () => {
-      const button = new View(NSButton.instance());
+      const button = new View(NSButton.instances()[0]);
       const view = new View();
       const nativeView = view.nativeView;
 
@@ -59,7 +60,7 @@ describe('View', function() {
 
   describe ('addVisualConstraint', () => {
     it('it sets the visual constraints', () => {
-      const button = new View(NSButton.instance());
+      const button = new View(NSButton.instances()[0]);
       const view = new View();
       const nativeView = view.nativeView;
 
@@ -78,7 +79,7 @@ describe('View', function() {
 
   describe ('addConstraint', () => {
     it('it set the contrainst', () => {
-      const button = new View(NSButton.instance());
+      const button = new View(NSButton.instances()[0]);
       const view = new View();
       const nativeView = view.nativeView;
 

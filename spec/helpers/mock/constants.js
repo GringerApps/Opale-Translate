@@ -15,3 +15,8 @@ NSLayoutRelationEqual = 0;
 NSMomentaryLightButton = 0;
 
 NSRoundedBezelStyle = 0;
+
+NSSwitchButton = 2;
+
+NSOnState = 0;
+NSOffState = 1;

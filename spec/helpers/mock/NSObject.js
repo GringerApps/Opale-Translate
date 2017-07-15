@@ -1,17 +1,19 @@
 NSObject = class NSObject {
   static alloc() {
-    return this.instance();
+    const instance = new this();
+    this.instances().push(instance);
+    return instance;
   }
 
-  static instance() {
-    if (this._instance === undefined) {
-      this._instance = new this();
+  static instances() {
+    if (this._instances === undefined || this._instances === []) {
+      this._instances = [];
     }
-    return this._instance;
+    return this._instances;
   }
 
   static reset() {
-    this._instance = undefined;
+    this._instances = [];
   }
 
   constructor() {

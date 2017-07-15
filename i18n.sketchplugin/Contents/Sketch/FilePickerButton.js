@@ -1,5 +1,4 @@
 const FilePicker = require('./FilePicker');
-const Delegator = require('./Delegator');
 const View = require('./View');
 const Button = require('./Button');
 const TextField = require('./TextField');

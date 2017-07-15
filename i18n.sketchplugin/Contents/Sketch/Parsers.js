@@ -1,5 +1,4 @@
 const XLSX = require('xlsx');
-const { TextEncoder } = require('text-encoding');
 
 class I18nGoParser {
   get encoding() {

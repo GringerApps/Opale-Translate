@@ -6,9 +6,12 @@ const Delegator = require('./Delegator');
 const Window = require('./Window');
 const { TITLE, MESSAGES } = require('./consts');
 const View = require('./View');
+const ImageView = require('./ImageView');
+const Checkbox = require('./Checkbox');
 const Button = require('./Button');
 
 const ALERT = new AlertWindow(TITLE);
+
 const verifySelection = (api) => {
   const selectedLayers = api.selectedDocument.selectedLayers;
   const selection = new Iterator(selectedLayers);
@@ -95,6 +98,28 @@ const buildView = (context, state) => {
   });
 
   window.addAccessoryView(fileSelectButton.nativeView);
+
+  const preview = new View();
+  preview.setFrame(NSMakeRect(0, 0, 480, 180));
+
+  const imgView = new ImageView(context);
+  imgView.setImageFromResource('grid_suffix.png');
+
+  const checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
+  checkBox.onSelectionChanged((checked) => {
+    const resource = checked ? 'grid_suffix.png' : 'grid.png';
+    imgView.setImageFromResource(resource);
+    state.firstRowForSuffix = checked;
+  });
+
+  const previewSubviews = { imgView, checkBox };
+  preview.addSubview(imgView);
+  preview.addSubview(checkBox);
+  preview.addVisualConstraint('H:|-0-[imgView(348)]-[checkBox]->=0-|', previewSubviews);
+  preview.addVisualConstraint('V:|-0-[imgView(180)]->=0-|', previewSubviews);
+  preview.addVisualConstraint('V:|-7-[checkBox]->=0-|', previewSubviews);
+
+  window.addAccessoryView(preview.nativeView);
   window.addButtonWithTitle('Replace text');
   window.addButtonWithTitle('Cancel');
 
@@ -124,7 +149,7 @@ translate = (context) => {
     applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
     addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
     caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-    firstRowForSuffix: false,
+    firstRowForSuffix: true,
     content: {}
   };
 

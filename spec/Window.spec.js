@@ -36,8 +36,9 @@ describe('Window', function() {
       const alert = NSAlert.instance();
 
       window.setInformativeText('Yo');
-      
+
       expect(window.informativeText()).toEqual('Yo');
+      expect(alert._informativeText).toEqual('Yo');
     });
   });
 
@@ -48,8 +49,9 @@ describe('Window', function() {
       const alert = NSAlert.instance();
 
       window.setMessageText('Yo');
-      
+
       expect(window.messageText()).toEqual('Yo');
+      expect(alert._messageText).toEqual('Yo');
     });
   });
 });
