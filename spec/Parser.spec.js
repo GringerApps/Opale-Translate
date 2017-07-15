@@ -1,5 +1,5 @@
 describe('parsers', () => {
-  const { I18nGoParser, ExcelParser } = require('../i18n.sketchplugin/Contents/Sketch/Parsers');
+  const { I18nGoParser, ExcelParser } = require('../opale_translate.sketchplugin/Contents/Sketch/Parsers');
   const fs = require('fs');
 
   const FIXTURES_FOLDER = 'spec/fixtures';

@@ -1,5 +1,5 @@
 describe('FilePickerButton', function() {
-  const FilePickerButton = require('../i18n.sketchplugin/Contents/Sketch/FilePickerButton');
+  const FilePickerButton = require('../opale_translate.sketchplugin/Contents/Sketch/FilePickerButton');
   const { VisualConstraint } = require('./helpers/mock/NSLayoutConstraint');
 
   beforeEach(() => {

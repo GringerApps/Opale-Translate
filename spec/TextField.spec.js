@@ -1,5 +1,5 @@
 describe('TextField', function() {
-  const TextField = require('../i18n.sketchplugin/Contents/Sketch/TextField');
+  const TextField = require('../opale_translate.sketchplugin/Contents/Sketch/TextField');
 
   beforeEach(() => {
     NSTextField.reset();

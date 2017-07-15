@@ -81,7 +81,7 @@ class TextReplacer {
     const window = this.window;
     const state = this.state;
 
-    window.setMessageText('Opale');
+    window.setMessageText('Opale Translate');
     window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
 
     const fileSelectButton = new FilePickerButton('Select a spreadsheet');

@@ -1,5 +1,5 @@
 describe('AlertWindow', function() {
-  const AlertWindow = require('../i18n.sketchplugin/Contents/Sketch/AlertWindow');
+  const AlertWindow = require('../opale_translate.sketchplugin/Contents/Sketch/AlertWindow');
 
   beforeEach(() => COSAlertWindow.reset());
 

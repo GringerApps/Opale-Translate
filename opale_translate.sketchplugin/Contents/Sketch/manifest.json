@@ -1,6 +1,6 @@
 {
-  "name" : "I18n",
-  "identifier" : "com.gringer.sketch.i18n",
+  "name" : "Opale Translate",
+  "identifier" : "com.opale.sketch.translate",
   "version" : "0.1",
   "description" : "Translate your sketchs",
   "author" : "Yohan Robert",
@@ -8,7 +8,7 @@
   "disableCocoaScriptPreprocessor": true,
   "commands" : [
     {
-      "name": "Translate",
+      "name": "Opale Translate",
       "shortcut": "ctrl shift t",
       "identifier": "translate",
       "script": "build/plugin.js",

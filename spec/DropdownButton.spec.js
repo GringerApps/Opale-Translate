@@ -1,5 +1,5 @@
 describe('DropdownButton', function() {
-  const DropdownButton = require('../i18n.sketchplugin/Contents/Sketch/DropdownButton');
+  const DropdownButton = require('../opale_translate.sketchplugin/Contents/Sketch/DropdownButton');
 
   beforeEach(() => {
     NSPopUpButton.reset();

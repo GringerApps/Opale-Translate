@@ -1,5 +1,5 @@
 describe('Window', function() {
-  const Window = require('../i18n.sketchplugin/Contents/Sketch/Window');
+  const Window = require('../opale_translate.sketchplugin/Contents/Sketch/Window');
 
   beforeEach(() => {
     NSAlert.reset();

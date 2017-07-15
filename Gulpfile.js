@@ -4,7 +4,7 @@ const browserify = require('gulp-browserify');
 const run = require('gulp-run');
 const babel = require('gulp-babel');
 
-const PLUGIN_FOLDER = 'i18n.sketchplugin/Contents/Sketch';
+const PLUGIN_FOLDER = 'opale_translate.sketchplugin/Contents/Sketch';
 const DIST_FOLDER = `${PLUGIN_FOLDER}/build`;
 
 gulp.task('test', () => run('npm test').exec());

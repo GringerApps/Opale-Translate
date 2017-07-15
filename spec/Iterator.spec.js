@@ -1,5 +1,5 @@
 describe('Iterator', () => {
-  const Iterator = require('../i18n.sketchplugin/Contents/Sketch/Iterator');
+  const Iterator = require('../opale_translate.sketchplugin/Contents/Sketch/Iterator');
 
   let iterator;
   let textLayer;

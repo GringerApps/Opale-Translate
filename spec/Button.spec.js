@@ -1,5 +1,5 @@
 describe('Button', function() {
-  const Button = require('../i18n.sketchplugin/Contents/Sketch/Button');
+  const Button = require('../opale_translate.sketchplugin/Contents/Sketch/Button');
 
   beforeEach(() => {
     NSButton.reset();

@@ -1,6 +1,6 @@
 describe('Row', function() {
-  const Row = require('../i18n.sketchplugin/Contents/Sketch/Row');
-  const Button = require('../i18n.sketchplugin/Contents/Sketch/Button');
+  const Row = require('../opale_translate.sketchplugin/Contents/Sketch/Row');
+  const Button = require('../opale_translate.sketchplugin/Contents/Sketch/Button');
   const { VisualConstraint, RelativeConstraint } = require('./helpers/mock/NSLayoutConstraint');
 
   beforeEach(() => {

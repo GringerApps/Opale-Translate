@@ -1,911 +1,4 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-class AlertWindow {
-  constructor(title) {
-    const window = COSAlertWindow.new();
-
-    window.setMessageText(title);
-    window.addButtonWithTitle('OK');
-
-    this.window = window;
-  }
-
-  show(message) {
-    this.window.setInformativeText(message);
-    this.window.runModal();
-  }
-}
-
-module.exports = AlertWindow;
-
-},{}],2:[function(require,module,exports){
-const View = require('./View');
-const Delegator = require('./Delegator');
-
-class Button extends View {
-  constructor(title) {
-    const button = NSButton.alloc().init();
-    super(button);
-
-    const self = this;
-    const delegator = new Delegator({ 'callback': () => self._onClick() });
-
-    button.setTitle(title);
-    button.setButtonType(NSMomentaryLightButton);
-    button.setBezelStyle(NSRoundedBezelStyle);
-    button.setTarget(delegator.getClassInstance());
-    button.setAction('callback');
-
-    this._onClick = () => {};
-  }
-
-  onClick(callback) {
-    this._onClick = callback;
-  }
-
-  setHighlighted(highlighted) {
-    this.nativeView.setHighlighted(highlighted);
-  }
-
-  setTitle(title) {
-    this.nativeView.setTitle(title);
-  }
-}
-
-module.exports = Button;
-
-},{"./Delegator":4,"./View":13}],3:[function(require,module,exports){
-const View = require('./View');
-const Delegator = require('./Delegator');
-
-class Checkbox extends View {
-  constructor(title, checked = false) {
-    const checkBox = NSButton.alloc().init();
-    checkBox.setTitle(title);
-    checkBox.setButtonType(NSSwitchButton);
-    super(checkBox);
-    const self = this;
-    const NSButtonDelegator = new Delegator({
-      callback: () => self._selectionChanged()
-    });
-    const delegator = NSButtonDelegator.getClassInstance();
-    checkBox.setTarget(delegator);
-    checkBox.setAction('callback');
-    this._onSelectionChanged = () => {};
-    this.setChecked(checked);
-  }
-
-  _selectionChanged() {
-    this._onSelectionChanged(this.nativeView.state() == NSOnState);
-  }
-
-  setChecked(checked) {
-    this.nativeView.setState(checked ? NSOnState : NSOffState);
-  }
-
-  onSelectionChanged(callback) {
-    this._onSelectionChanged = callback;
-  }
-}
-module.exports = Checkbox;
-
-},{"./Delegator":4,"./View":13}],4:[function(require,module,exports){
-class Delegator {
-  constructor(selectorHandlerDict, superclass) {
-    this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
-    this.delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueClassName, superclass || NSObject);
-    this.delegateClassDesc.registerClass();
-    this.handlers = {};
-
-    if (typeof selectorHandlerDict === 'object') {
-      for (let selectorString in selectorHandlerDict) {
-        this.setHandlerForSelector(selectorString, selectorHandlerDict[selectorString]);
-      }
-    }
-  }
-
-  setHandlerForSelector(selectorString, func) {
-    const handlerHasBeenSet = (selectorString in this.handlers);
-    const selector = NSSelectorFromString(selectorString);
-
-    this.handlers[selectorString] = func;
-
-    if (!handlerHasBeenSet) {
-      const args = [];
-      const regex = /:/g;
-      while (regex.exec(selectorString)) {
-        args.push('arg' + args.length);
-      }
-      const handlers = this.handlers;
-      const dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })');
-
-      this.delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction);
-    }
-  }
-
-  getClassInstance() {
-    const instance = NSClassFromString(this.uniqueClassName).alloc().init();
-    return instance;
-  }
-}
-
-module.exports = Delegator;
-
-},{}],5:[function(require,module,exports){
-const Delegator = require('./Delegator');
-const View = require('./View');
-
-class DropdownButton extends View {
-  constructor(pullsDown = false) {
-    const btn = NSPopUpButton.alloc().init();
-    btn.pullsdown = pullsDown;
-    super(btn);
-
-    const self = this;
-    const NSPopUpButtonDelegator = new Delegator({
-      callback: () => {
-        self._selectionChanged();
-      }
-    });
-    const delegator = NSPopUpButtonDelegator.getClassInstance();
-
-    btn.setAction('callback');
-    btn.setTarget(delegator);
-
-    this._selectionChangedCallback = () => {};
-  }
-
-  _selectionChanged() {
-    const idx = this.nativeView.indexOfSelectedItem();
-    const title = this.nativeView.titleOfSelectedItem();
-    this._selectionChangedCallback(idx, title);
-  }
-
-  onSelectionChanged(callback) {
-    this._selectionChangedCallback = callback;
-    return this;
-  }
-
-  addItem(title) {
-    this.nativeView.addItemWithTitle(title);
-    return this;
-  }
-
-  addItems(titles) {
-    this.nativeView.addItemsWithTitles(titles);
-    return this;
-  }
-}
-
-module.exports = DropdownButton;
-
-},{"./Delegator":4,"./View":13}],6:[function(require,module,exports){
-class FilePicker {
-  constructor() {
-    const panel = NSOpenPanel.openPanel();
-    panel.setCanChooseFiles(true);
-    panel.setCanChooseDirectories(false);
-    panel.setAllowsMultipleSelection(false);
-
-    this.panel = panel;
-    this.modalResult = NSFileHandlingPanelCancelButton;
-  }
-
-  show() {
-    const result = this.panel.runModal();
-    this.modalResult = result;
-    return result == NSFileHandlingPanelOKButton;
-  }
-
-  choseFiles() {
-    return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
-  }
-
-  files() {
-    return this.panel.filenames();
-  }
-}
-
-module.exports = FilePicker;
-
-},{}],7:[function(require,module,exports){
-const FilePicker = require('./FilePicker');
-const View = require('./View');
-const Button = require('./Button');
-const TextField = require('./TextField');
-
-const DEFAULT_BUTTON_TITLE = 'Select file';
-
-class FilePickerButton extends View {
-  constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
-    super();
-
-    const self = this;
-    this._button = new Button(buttonTitle);
-    this._button.onClick(() => self._onClick());
-    this._button.setHighlighted(true);
-
-    this._label = new TextField(labelText);
-
-    this._filePicker = new FilePicker();
-
-    this._onFileSelected = () => {};
-
-    this.addSubview(this._label);
-    this.addSubview(this._button);
-
-    const constraintMapping = {
-      button: this._button,
-      label: this._label
-    };
-    this.addVisualConstraint('H:|-0-[label]-[button]->=0-|', constraintMapping);
-    this.addVisualConstraint('V:|->=0-[label]->=0-|', constraintMapping);
-    this.addVisualConstraint('V:|->=0-[button]->=0-|', constraintMapping);
-  }
-
-  _onClick() {
-    const picker = this._filePicker;
-    picker.show();
-    if(picker.choseFiles()) {
-      const files = picker.files();
-      this._button.setTitle('Replace file');
-      this._onFileSelected(files);
-    }
-  }
-
-  setLabel(label) {
-    this._label.setText(label);
-  }
-
-  onFileSelected(callback) {
-    this._onFileSelected = callback;
-  }
-}
-
-module.exports = FilePickerButton;
-
-},{"./Button":2,"./FilePicker":6,"./TextField":12,"./View":13}],8:[function(require,module,exports){
-const View = require('./View');
-
-class ImageView extends View {
-  constructor(context) {
-    const imgView = NSImageView.alloc().init();
-    imgView.setImageAlignment(2);
-    imgView.setImageScaling(0);
-    super(imgView);
-    this._context = context;
-    this._imageCache = {};
-  }
-
-  setImageFromResource(resourceName) {
-    if (this._imageCache.hasOwnProperty(resourceName)) {
-      const cachedImg = this._imageCache[resourceName];
-      this.nativeView.setImage(cachedImg);
-    }
-    const url = this._context.api().resourceNamed(resourceName);
-    const img = NSImage.alloc().initWithContentsOfURL(url);
-    this._imageCache[resourceName] = img;
-    this.nativeView.setImage(img);
-  }
-}
-
-module.exports = ImageView;
-
-},{"./View":13}],9:[function(require,module,exports){
-class ArrayWrapper {
-  constructor(array) {
-    this.array = array;
-  }
-
-  get length() {
-    return this.array.length;
-  }
-
-  iterate(callback) {
-    for (let i = 0; i < this.length; i++) {
-      callback(this.array[i]);
-    }
-  }
-}
-
-class Iterator {
-  constructor(list) {
-    if (list.length === undefined) {
-      list = [list];
-    }
-    if (list.constructor === Array) {
-      list = new ArrayWrapper(list);
-    }
-    this.list = list;
-    this.length = list.length;
-  }
-
-  _iterateOnLayer(layer, callback) {
-    callback(layer);
-    if (layer.isGroup) {
-      const self = this;
-      layer.iterate(function (sublayer) {
-        self._iterateOnLayer(sublayer, callback);
-      });
-    }
-  }
-
-  iterate(callback, deep) {
-    const self = this;
-    this.list.iterate(function (layer) {
-      if (deep) {
-        self._iterateOnLayer(layer, callback);
-      } else {
-        callback(layer);
-      }
-    });
-  }
-
-  forEach(callback, deep) {
-    this.iterate(callback, deep);
-  }
-
-  filter(predicate, deep) {
-    const result = [];
-    this.iterate((layer) => {
-      if (predicate(layer)) {
-        result.push(layer);
-      }
-    }, deep);
-    return new Iterator(result);
-  }
-
-  map(callback, deep) {
-    const result = [];
-    this.iterate((layer) => {
-      result.push(callback(layer));
-    }, deep);
-    return result;
-  }
-
-  toArray(deep) {
-    const result = [];
-    this.iterate((layer) => {
-      result.push(layer);
-    }, deep);
-    return result;
-  }
-
-  count() {
-    return this.list.length;
-  }
-}
-
-module.exports = Iterator;
-
-},{}],10:[function(require,module,exports){
-const XLSX = require('xlsx');
-
-class I18nGoParser {
-  get encoding() {
-    return NSUTF8StringEncoding;
-  }
-
-  parse(content) {
-    const result = {};
-    for (let key in content) {
-      const translations = JSON.parse(content[key]);
-      const mappedTranslations = {};
-      for (let i = 0; i < translations.length; i++) {
-        const translation = translations[i];
-        mappedTranslations[translation.id] = translation.translation;
-      }
-      result[key] = mappedTranslations;
-    }
-    return result;
-  }
-}
-
-class ExcelParser {
-  constructor(parseHeader = true) {
-    this._parserHeader = parseHeader;
-  }
-
-  get encoding() {
-    return NSISOLatin1StringEncoding;
-  }
-
-  parse(content) {
-    const result = {};
-    for (let key in content) {
-      const fileContent = String(content[key]);
-      const workbook = XLSX.read(fileContent, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
-      for (let i = 1; i < headers.length; i++) {
-        const language = headers[i];
-        result[language] = {};
-      }
-      for (let i = 0; i < translations.length; i++) {
-        const mapping = translations[i];
-        for (let j = 1; j < mapping.length; j++) {
-          const language = headers[j];
-          const key = mapping[0];
-          const translation = mapping[j];
-          result[language][key] = translation;
-        }
-      }
-    }
-    return result;
-  }
-}
-
-module.exports = {
-  I18nGoParser,
-  ExcelParser
-};
-
-},{"xlsx":24}],11:[function(require,module,exports){
-const View = require('./View');
-
-class Row extends View {
-  constructor(left, right) {
-    super();
-    this.left = left;
-    this.right = right;
-    this.nativeView.addSubview(left.nativeView);
-    this.nativeView.addSubview(right.nativeView);
-    this.addVisualConstraint('H:|-0-[left]-[right]->=0-|', { left: left, right: right });
-    this.addVisualConstraint('V:|-0-[left]-0-|', { left: left });
-    this.addVisualConstraint('V:|-0-[right]-0-|', { right: right });
-  }
-
-  alignWith(row) {
-    this.left.addConstraint({ to: row.left, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
-    this.right.addConstraint({ to: row.right, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
-  }
-}
-
-module.exports = Row;
-
-},{"./View":13}],12:[function(require,module,exports){
-const View = require('./View');
-
-class TextField extends View {
-  static get TEXT_ALIGNMENT() {
-    return {
-      LEFT: 0,
-      RIGHT: 1
-    };
-  }
-
-  constructor(text, textAlignment = TextField.TEXT_ALIGNMENT.LEFT) {
-    const textField = NSTextField.alloc().init();
-    super(textField);
-    this.setTextAlignment(textAlignment)
-      .setDrawsBackground(false)
-      .setEditable(false)
-      .setBezeled(false)
-      .setSelectable(true)
-      .setText(text);
-  }
-
-  setTextAlignment(alignment) {
-    this.nativeView.setAlignment(alignment);
-    return this;
-  }
-
-  setDrawsBackground(drawsBackground) {
-    this.nativeView.setDrawsBackground(drawsBackground);
-    return this;
-  }
-
-  setEditable(editable) {
-    this.nativeView.setEditable(editable);
-    return this;
-  }
-
-  setBezeled(bezeled) {
-    this.nativeView.setBezeled(bezeled);
-    return this;
-  }
-
-  setSelectable(selectable) {
-    this.nativeView.setSelectable(selectable);
-    return this;
-  }
-
-  setText(text) {
-    this.nativeView.setStringValue(text);
-    return this;
-  }
-}
-
-module.exports = TextField;
-
-},{"./View":13}],13:[function(require,module,exports){
-class View {
-  static get LAYOUT_TYPE() {
-    return {
-      FRAME: 0,
-      CONSTRAINTS: 1
-    };
-  }
-
-  constructor(nativeView = null) {
-    this._subviews = [];
-    this._nativeView = nativeView || NSView.alloc().initWithFrame(NSMakeRect(0, 0, 0, 0));
-    this.setLayoutType(this.constructor.LAYOUT_TYPE.CONSTRAINTS);
-  }
-
-  get nativeView() {
-    return this._nativeView;
-  }
-
-  setFrame(frame) {
-    this.nativeView.setFrame(frame);
-  }
-
-  addSubview(subview) {
-    this._subviews.push(subview);
-    this.nativeView.addSubview(subview.nativeView);
-  }
-
-  addVisualConstraint(constraintStr, mapping) {
-    const nativeMapping = {};
-    Object.keys(mapping).forEach(function(key) {
-      nativeMapping[key] = mapping[key].nativeView;
-    });
-    const constraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(constraintStr, 0, null, nativeMapping);
-    this.nativeView.addConstraints(constraints);
-  }
-
-  addConstraint(opts) {
-    opts = Object.assign({ multiplier: 1, constant: 0, relatedBy: NSLayoutRelationEqual }, opts);
-    const { to, attr, relatedBy, multiplier, constant } = opts;
-    NSLayoutConstraint.constraintWithItem_attribute_relatedBy_toItem_attribute_multiplier_constant(
-      this.nativeView, attr, relatedBy, to.nativeView, attr, multiplier, constant
-    ).setActive(true);
-  }
-
-  setLayoutType(type) {
-    const frameType = this.constructor.LAYOUT_TYPE.FRAME;
-    this.nativeView.setTranslatesAutoresizingMaskIntoConstraints(type == frameType);
-  }
-}
-
-module.exports = View;
-
-},{}],14:[function(require,module,exports){
-class Window {
-  constructor() {
-    const x = 0, y = 0, w = 500, h = 300;
-    this._views = [];
-    this._frame = NSMakeRect(x, y, w, h);
-    this._alert = NSAlert.new();
-  }
-
-  _layout() {
-    if (!this._views) {
-      return;
-    }
-
-    let height = 0;
-    const sup = NSView.alloc().initWithFrame(this._frame);
-
-    this._views.reverse().forEach((view) => {
-      const currentFrame = view.bounds();
-
-      currentFrame.origin.y = height;
-
-      height += currentFrame.size.height + 8;
-
-      view.setFrame(currentFrame);
-
-      sup.addSubview(view);
-    });
-
-    const viewFrame = sup.frame();
-    if (viewFrame.size.height <= height) {
-      viewFrame.size.height = height;
-    }
-
-    sup.setFrame(viewFrame);
-    this._alert.setAccessoryView(sup);
-  }
-
-  addAccessoryView(view) {
-    this._views.push(view);
-  }
-
-  setMessageText(messageText) {
-    this._alert.setMessageText(messageText);
-  }
-
-  setInformativeText(informativeText) {
-    this._alert.setInformativeText(informativeText);
-  }
-
-  messageText() {
-    return this._alert.messageText;
-  }
-
-  informativeText() {
-    return this._alert.informativeText;
-  }
-
-  addButtonWithTitle(title) {
-    this._alert.addButtonWithTitle(title);
-    return this;
-  }
-
-  buttons() {
-    return this._alert.buttons();
-  }
-
-  close() {
-    NSApp.endSheet(this._alert.window());
-  }
-
-  runModal() {
-    this._layout();
-
-    return this._alert.runModal();
-  }
-}
-
-module.exports = Window;
-
-},{}],15:[function(require,module,exports){
-module.exports = {
-  TITLE: 'Opal Translate',
-  MESSAGES: {
-    WRONG_SELECTION: 'Only Artboards can be translated by this plugin',
-    EMPTY_SELECTION: 'Please select an artboard to be translated',
-  },
-  SCALE_FACTOR: 0.5
-};
-
-},{}],16:[function(require,module,exports){
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Iterator = require('./Iterator');
-
-var _require = require('./Parsers'),
-    ExcelParser = _require.ExcelParser;
-
-var AlertWindow = require('./AlertWindow');
-var FilePickerButton = require('./FilePickerButton');
-var Delegator = require('./Delegator');
-var Window = require('./Window');
-
-var _require2 = require('./consts'),
-    TITLE = _require2.TITLE,
-    MESSAGES = _require2.MESSAGES;
-
-var View = require('./View');
-var TextField = require('./TextField');
-var DropdownButton = require('./DropdownButton');
-var Row = require('./Row');
-var ImageView = require('./ImageView');
-var Checkbox = require('./Checkbox');
-var Button = require('./Button');
-
-var ALERT = new AlertWindow(TITLE);
-
-var OPTIONS = {
-  APPLY_TO: {
-    SELECTED_ARTBOARDS: 0
-  },
-  ADD_ARTBOARD_TO: {
-    THE_RIGHT: 0
-  },
-  CASE_MATCHING: {
-    SENSITIVE: 0
-  }
-};
-
-translate = function translate(context) {
-  new TextReplacer(context).run();
-};
-
-var TextReplacer = function () {
-  function TextReplacer(context) {
-    _classCallCheck(this, TextReplacer);
-
-    this.context = context;
-    this.state = {
-      applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
-      addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
-      caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-      firstRowForSuffix: true
-    };
-    this.content = {};
-    this.window = new Window();
-  }
-
-  _createClass(TextReplacer, [{
-    key: '_translateTexts',
-    value: function _translateTexts() {
-      if (this._verifySelection()) {
-        var api = this.context.api();
-        var selectedLayers = api.selectedDocument.selectedLayers;
-        var selection = new Iterator(selectedLayers);
-        var artboards = selection.filter(function (layer) {
-          return layer.isArtboard;
-        });
-        var parser = new ExcelParser(this.state.firstRowForSuffix);
-        var translatedContent = parser.parse(this.content);
-        artboards.forEach(function (layer) {
-          var frame = layer.frame;
-
-          var _loop = function _loop(key) {
-            var translations = translatedContent[key];
-            var duplicatedLayer = layer.duplicate();
-            frame.offset(frame.width + 20, 0);
-            duplicatedLayer.frame = frame;
-            duplicatedLayer.name = duplicatedLayer.name + '-' + key;
-            var iterator = new Iterator([duplicatedLayer]);
-            var texts = iterator.filter(function (layer) {
-              return layer.isText;
-            }, true);
-            texts.forEach(function (layer) {
-              var text = String(layer.text);
-              var translation = translations[text] || text;
-              layer.text = translation;
-            });
-          };
-
-          for (var key in translatedContent) {
-            _loop(key);
-          }
-        });
-        this.window.close();
-      }
-    }
-  }, {
-    key: '_buildView',
-    value: function _buildView() {
-      var replacer = this;
-      var context = this.context;
-      var window = this.window;
-      var state = this.state;
-
-      window.setMessageText('Opale');
-      window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
-
-      var fileSelectButton = new FilePickerButton('Select a spreadsheet');
-      fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
-      fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
-      fileSelectButton.onFileSelected(function (files) {
-        var result = {};
-        if (files.length < 1) {
-          return result;
-        }
-        var filename = String(files[0]).split('\\').pop().split('/').pop();
-        fileSelectButton.setLabel('Spreadsheet: ' + filename);
-        for (var i = 0; i < files.length; i++) {
-          var fullpath = files[i];
-
-          var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-          var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
-          result[_filename] = content;
-          replacer.content = result;
-        }
-        replaceBtn.setEnabled(true);
-      });
-
-      window.addAccessoryView(fileSelectButton.nativeView);
-
-      var preview = new View();
-      preview.setFrame(NSMakeRect(0, 0, 480, 180));
-
-      var imgView = new ImageView(context);
-      imgView.setImageFromResource('grid_suffix.png');
-
-      var checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
-      checkBox.onSelectionChanged(function (checked) {
-        var resource = checked ? 'grid_suffix.png' : 'grid.png';
-        imgView.setImageFromResource(resource);
-        state.firstRowForSuffix = checked;
-      });
-
-      var previewSubviews = { imgView: imgView, checkBox: checkBox };
-      preview.addSubview(imgView);
-      preview.addSubview(checkBox);
-      preview.addVisualConstraint('H:|-0-[imgView(348)]-[checkBox]->=0-|', previewSubviews);
-      preview.addVisualConstraint('V:|-0-[imgView(180)]->=0-|', previewSubviews);
-      preview.addVisualConstraint('V:|-7-[checkBox]->=0-|', previewSubviews);
-
-      window.addAccessoryView(preview.nativeView);
-
-      var applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var applyToDropdown = new DropdownButton().addItems(['Selected artboards']).onSelectionChanged(function (idx) {
-        state.applyTo = idx;
-      });
-      var applyToRow = new Row(applyToLabel, applyToDropdown);
-
-      var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var artboardPositionDropdown = new DropdownButton().addItems(['Right']).onSelectionChanged(function () {
-        state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
-      });
-      var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
-
-      var caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var caseDropdown = new DropdownButton().addItems(['Case sensitive']).onSelectionChanged(function () {
-        state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
-      });
-      var caseRow = new Row(caseLabel, caseDropdown);
-
-      var dropdownsView = new View();
-      dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
-      dropdownsView.addSubview(applyToRow);
-      dropdownsView.addSubview(artboardRow);
-      dropdownsView.addSubview(caseRow);
-      dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]|', { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
-      artboardRow.alignWith(applyToRow);
-      caseRow.alignWith(applyToRow);
-
-      window.addAccessoryView(dropdownsView.nativeView);
-
-      window.addButtonWithTitle('Replace text');
-      window.addButtonWithTitle('Cancel');
-
-      var btns = window.buttons();
-      var replaceBtn = btns[0];
-      var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
-          return replacer._translateTexts();
-        } });
-      var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
-      replaceBtn.setTarget(replaceDelegator);
-      replaceBtn.setAction('callback');
-      replaceBtn.setEnabled(false);
-      replaceBtn.setHighlighted(true);
-
-      var CancelButtonDelegator = new Delegator({ callback: function callback() {
-          return window.close();
-        } });
-      var cancelDelegator = CancelButtonDelegator.getClassInstance();
-      var cancelBtn = btns[1];
-      cancelBtn.setTarget(cancelDelegator);
-      cancelBtn.setAction('callback');
-      cancelBtn.setHighlighted(false);
-
-      var btn = new Button('test');
-      btns.push(btn);
-    }
-  }, {
-    key: '_verifySelection',
-    value: function _verifySelection() {
-      var api = this.context.api();
-      var selectedLayers = api.selectedDocument.selectedLayers;
-      var selection = new Iterator(selectedLayers);
-
-      if (selection.count() == 0) {
-        ALERT.show(MESSAGES.EMPTY_SELECTION);
-        return false;
-      }
-
-      var artboards = selection.filter(function (layer) {
-        return layer.isArtboard;
-      });
-
-      if (artboards.count() != selection.count()) {
-        ALERT.show(MESSAGES.WRONG_SELECTION);
-        return false;
-      }
-
-      return true;
-    }
-  }, {
-    key: 'run',
-    value: function run() {
-      this._buildView();
-      this.window.runModal();
-    }
-  }]);
-
-  return TextReplacer;
-}();
-},{"./AlertWindow":1,"./Button":2,"./Checkbox":3,"./Delegator":4,"./DropdownButton":5,"./FilePickerButton":7,"./ImageView":8,"./Iterator":9,"./Parsers":10,"./Row":11,"./TextField":12,"./View":13,"./Window":14,"./consts":15}],17:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -1031,9 +124,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],18:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 
-},{}],19:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -2144,7 +1237,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":17,"ieee754":21}],20:[function(require,module,exports){
+},{"base64-js":1,"ieee754":5}],4:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2209,7 +1302,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],21:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -2295,7 +1388,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],22:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -3790,7 +2883,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":19}],23:[function(require,module,exports){
+},{"buffer":3}],7:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -12782,7 +11875,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":19}],24:[function(require,module,exports){
+},{"buffer":3}],8:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -30708,4 +29801,913 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":22,"./jszip.js":23,"buffer":19,"crypto":18,"fs":18,"km4Umf":20,"stream":18}]},{},[16])
+},{"./dist/cpexcel.js":6,"./jszip.js":7,"buffer":3,"crypto":2,"fs":2,"km4Umf":4,"stream":2}],9:[function(require,module,exports){
+class AlertWindow {
+  constructor(title) {
+    const window = COSAlertWindow.new();
+
+    window.setMessageText(title);
+    window.addButtonWithTitle('OK');
+
+    this.window = window;
+  }
+
+  show(message) {
+    this.window.setInformativeText(message);
+    this.window.runModal();
+  }
+}
+
+module.exports = AlertWindow;
+
+},{}],10:[function(require,module,exports){
+const View = require('./View');
+const Delegator = require('./Delegator');
+
+class Button extends View {
+  constructor(title) {
+    const button = NSButton.alloc().init();
+    super(button);
+
+    const self = this;
+    const delegator = new Delegator({ 'callback': () => self._onClick() });
+
+    button.setTitle(title);
+    button.setButtonType(NSMomentaryLightButton);
+    button.setBezelStyle(NSRoundedBezelStyle);
+    button.setTarget(delegator.getClassInstance());
+    button.setAction('callback');
+
+    this._onClick = () => {};
+  }
+
+  onClick(callback) {
+    this._onClick = callback;
+  }
+
+  setHighlighted(highlighted) {
+    this.nativeView.setHighlighted(highlighted);
+  }
+
+  setTitle(title) {
+    this.nativeView.setTitle(title);
+  }
+}
+
+module.exports = Button;
+
+},{"./Delegator":12,"./View":21}],11:[function(require,module,exports){
+const View = require('./View');
+const Delegator = require('./Delegator');
+
+class Checkbox extends View {
+  constructor(title, checked = false) {
+    const checkBox = NSButton.alloc().init();
+    checkBox.setTitle(title);
+    checkBox.setButtonType(NSSwitchButton);
+    super(checkBox);
+    const self = this;
+    const NSButtonDelegator = new Delegator({
+      callback: () => self._selectionChanged()
+    });
+    const delegator = NSButtonDelegator.getClassInstance();
+    checkBox.setTarget(delegator);
+    checkBox.setAction('callback');
+    this._onSelectionChanged = () => {};
+    this.setChecked(checked);
+  }
+
+  _selectionChanged() {
+    this._onSelectionChanged(this.nativeView.state() == NSOnState);
+  }
+
+  setChecked(checked) {
+    this.nativeView.setState(checked ? NSOnState : NSOffState);
+  }
+
+  onSelectionChanged(callback) {
+    this._onSelectionChanged = callback;
+  }
+}
+module.exports = Checkbox;
+
+},{"./Delegator":12,"./View":21}],12:[function(require,module,exports){
+class Delegator {
+  constructor(selectorHandlerDict, superclass) {
+    this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
+    this.delegateClassDesc = MOClassDescription.allocateDescriptionForClassWithName_superclass_(this.uniqueClassName, superclass || NSObject);
+    this.delegateClassDesc.registerClass();
+    this.handlers = {};
+
+    if (typeof selectorHandlerDict === 'object') {
+      for (let selectorString in selectorHandlerDict) {
+        this.setHandlerForSelector(selectorString, selectorHandlerDict[selectorString]);
+      }
+    }
+  }
+
+  setHandlerForSelector(selectorString, func) {
+    const handlerHasBeenSet = (selectorString in this.handlers);
+    const selector = NSSelectorFromString(selectorString);
+
+    this.handlers[selectorString] = func;
+
+    if (!handlerHasBeenSet) {
+      const args = [];
+      const regex = /:/g;
+      while (regex.exec(selectorString)) {
+        args.push('arg' + args.length);
+      }
+      const handlers = this.handlers;
+      const dynamicFunction = eval('(function (' + args.join(', ') + ') { return handlers[selectorString].apply(this, arguments); })');
+
+      this.delegateClassDesc.addInstanceMethodWithSelector_function_(selector, dynamicFunction);
+    }
+  }
+
+  getClassInstance() {
+    const instance = NSClassFromString(this.uniqueClassName).alloc().init();
+    return instance;
+  }
+}
+
+module.exports = Delegator;
+
+},{}],13:[function(require,module,exports){
+const Delegator = require('./Delegator');
+const View = require('./View');
+
+class DropdownButton extends View {
+  constructor(pullsDown = false) {
+    const btn = NSPopUpButton.alloc().init();
+    btn.pullsdown = pullsDown;
+    super(btn);
+
+    const self = this;
+    const NSPopUpButtonDelegator = new Delegator({
+      callback: () => {
+        self._selectionChanged();
+      }
+    });
+    const delegator = NSPopUpButtonDelegator.getClassInstance();
+
+    btn.setAction('callback');
+    btn.setTarget(delegator);
+
+    this._selectionChangedCallback = () => {};
+  }
+
+  _selectionChanged() {
+    const idx = this.nativeView.indexOfSelectedItem();
+    const title = this.nativeView.titleOfSelectedItem();
+    this._selectionChangedCallback(idx, title);
+  }
+
+  onSelectionChanged(callback) {
+    this._selectionChangedCallback = callback;
+    return this;
+  }
+
+  addItem(title) {
+    this.nativeView.addItemWithTitle(title);
+    return this;
+  }
+
+  addItems(titles) {
+    this.nativeView.addItemsWithTitles(titles);
+    return this;
+  }
+}
+
+module.exports = DropdownButton;
+
+},{"./Delegator":12,"./View":21}],14:[function(require,module,exports){
+class FilePicker {
+  constructor() {
+    const panel = NSOpenPanel.openPanel();
+    panel.setCanChooseFiles(true);
+    panel.setCanChooseDirectories(false);
+    panel.setAllowsMultipleSelection(false);
+
+    this.panel = panel;
+    this.modalResult = NSFileHandlingPanelCancelButton;
+  }
+
+  show() {
+    const result = this.panel.runModal();
+    this.modalResult = result;
+    return result == NSFileHandlingPanelOKButton;
+  }
+
+  choseFiles() {
+    return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
+  }
+
+  files() {
+    return this.panel.filenames();
+  }
+}
+
+module.exports = FilePicker;
+
+},{}],15:[function(require,module,exports){
+const FilePicker = require('./FilePicker');
+const View = require('./View');
+const Button = require('./Button');
+const TextField = require('./TextField');
+
+const DEFAULT_BUTTON_TITLE = 'Select file';
+
+class FilePickerButton extends View {
+  constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
+    super();
+
+    const self = this;
+    this._button = new Button(buttonTitle);
+    this._button.onClick(() => self._onClick());
+    this._button.setHighlighted(true);
+
+    this._label = new TextField(labelText);
+
+    this._filePicker = new FilePicker();
+
+    this._onFileSelected = () => {};
+
+    this.addSubview(this._label);
+    this.addSubview(this._button);
+
+    const constraintMapping = {
+      button: this._button,
+      label: this._label
+    };
+    this.addVisualConstraint('H:|-0-[label]-[button]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[label]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[button]->=0-|', constraintMapping);
+  }
+
+  _onClick() {
+    const picker = this._filePicker;
+    picker.show();
+    if(picker.choseFiles()) {
+      const files = picker.files();
+      this._button.setTitle('Replace file');
+      this._onFileSelected(files);
+    }
+  }
+
+  setLabel(label) {
+    this._label.setText(label);
+  }
+
+  onFileSelected(callback) {
+    this._onFileSelected = callback;
+  }
+}
+
+module.exports = FilePickerButton;
+
+},{"./Button":10,"./FilePicker":14,"./TextField":20,"./View":21}],16:[function(require,module,exports){
+const View = require('./View');
+
+class ImageView extends View {
+  constructor(context) {
+    const imgView = NSImageView.alloc().init();
+    imgView.setImageAlignment(2);
+    imgView.setImageScaling(0);
+    super(imgView);
+    this._context = context;
+    this._imageCache = {};
+  }
+
+  setImageFromResource(resourceName) {
+    if (this._imageCache.hasOwnProperty(resourceName)) {
+      const cachedImg = this._imageCache[resourceName];
+      this.nativeView.setImage(cachedImg);
+    }
+    const url = this._context.api().resourceNamed(resourceName);
+    const img = NSImage.alloc().initWithContentsOfURL(url);
+    this._imageCache[resourceName] = img;
+    this.nativeView.setImage(img);
+  }
+}
+
+module.exports = ImageView;
+
+},{"./View":21}],17:[function(require,module,exports){
+class ArrayWrapper {
+  constructor(array) {
+    this.array = array;
+  }
+
+  get length() {
+    return this.array.length;
+  }
+
+  iterate(callback) {
+    for (let i = 0; i < this.length; i++) {
+      callback(this.array[i]);
+    }
+  }
+}
+
+class Iterator {
+  constructor(list) {
+    if (list.length === undefined) {
+      list = [list];
+    }
+    if (list.constructor === Array) {
+      list = new ArrayWrapper(list);
+    }
+    this.list = list;
+    this.length = list.length;
+  }
+
+  _iterateOnLayer(layer, callback) {
+    callback(layer);
+    if (layer.isGroup) {
+      const self = this;
+      layer.iterate(function (sublayer) {
+        self._iterateOnLayer(sublayer, callback);
+      });
+    }
+  }
+
+  iterate(callback, deep) {
+    const self = this;
+    this.list.iterate(function (layer) {
+      if (deep) {
+        self._iterateOnLayer(layer, callback);
+      } else {
+        callback(layer);
+      }
+    });
+  }
+
+  forEach(callback, deep) {
+    this.iterate(callback, deep);
+  }
+
+  filter(predicate, deep) {
+    const result = [];
+    this.iterate((layer) => {
+      if (predicate(layer)) {
+        result.push(layer);
+      }
+    }, deep);
+    return new Iterator(result);
+  }
+
+  map(callback, deep) {
+    const result = [];
+    this.iterate((layer) => {
+      result.push(callback(layer));
+    }, deep);
+    return result;
+  }
+
+  toArray(deep) {
+    const result = [];
+    this.iterate((layer) => {
+      result.push(layer);
+    }, deep);
+    return result;
+  }
+
+  count() {
+    return this.list.length;
+  }
+}
+
+module.exports = Iterator;
+
+},{}],18:[function(require,module,exports){
+const XLSX = require('xlsx');
+
+class I18nGoParser {
+  get encoding() {
+    return NSUTF8StringEncoding;
+  }
+
+  parse(content) {
+    const result = {};
+    for (let key in content) {
+      const translations = JSON.parse(content[key]);
+      const mappedTranslations = {};
+      for (let i = 0; i < translations.length; i++) {
+        const translation = translations[i];
+        mappedTranslations[translation.id] = translation.translation;
+      }
+      result[key] = mappedTranslations;
+    }
+    return result;
+  }
+}
+
+class ExcelParser {
+  constructor(parseHeader = true) {
+    this._parserHeader = parseHeader;
+  }
+
+  get encoding() {
+    return NSISOLatin1StringEncoding;
+  }
+
+  parse(content) {
+    const result = {};
+    for (let key in content) {
+      const fileContent = String(content[key]);
+      const workbook = XLSX.read(fileContent, { type: 'binary' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
+      for (let i = 1; i < headers.length; i++) {
+        const language = headers[i];
+        result[language] = {};
+      }
+      for (let i = 0; i < translations.length; i++) {
+        const mapping = translations[i];
+        for (let j = 1; j < mapping.length; j++) {
+          const language = headers[j];
+          const key = mapping[0];
+          const translation = mapping[j];
+          result[language][key] = translation;
+        }
+      }
+    }
+    return result;
+  }
+}
+
+module.exports = {
+  I18nGoParser,
+  ExcelParser
+};
+
+},{"xlsx":8}],19:[function(require,module,exports){
+const View = require('./View');
+
+class Row extends View {
+  constructor(left, right) {
+    super();
+    this.left = left;
+    this.right = right;
+    this.nativeView.addSubview(left.nativeView);
+    this.nativeView.addSubview(right.nativeView);
+    this.addVisualConstraint('H:|-0-[left]-[right]->=0-|', { left: left, right: right });
+    this.addVisualConstraint('V:|-0-[left]-0-|', { left: left });
+    this.addVisualConstraint('V:|-0-[right]-0-|', { right: right });
+  }
+
+  alignWith(row) {
+    this.left.addConstraint({ to: row.left, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
+    this.right.addConstraint({ to: row.right, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
+  }
+}
+
+module.exports = Row;
+
+},{"./View":21}],20:[function(require,module,exports){
+const View = require('./View');
+
+class TextField extends View {
+  static get TEXT_ALIGNMENT() {
+    return {
+      LEFT: 0,
+      RIGHT: 1
+    };
+  }
+
+  constructor(text, textAlignment = TextField.TEXT_ALIGNMENT.LEFT) {
+    const textField = NSTextField.alloc().init();
+    super(textField);
+    this.setTextAlignment(textAlignment)
+      .setDrawsBackground(false)
+      .setEditable(false)
+      .setBezeled(false)
+      .setSelectable(true)
+      .setText(text);
+  }
+
+  setTextAlignment(alignment) {
+    this.nativeView.setAlignment(alignment);
+    return this;
+  }
+
+  setDrawsBackground(drawsBackground) {
+    this.nativeView.setDrawsBackground(drawsBackground);
+    return this;
+  }
+
+  setEditable(editable) {
+    this.nativeView.setEditable(editable);
+    return this;
+  }
+
+  setBezeled(bezeled) {
+    this.nativeView.setBezeled(bezeled);
+    return this;
+  }
+
+  setSelectable(selectable) {
+    this.nativeView.setSelectable(selectable);
+    return this;
+  }
+
+  setText(text) {
+    this.nativeView.setStringValue(text);
+    return this;
+  }
+}
+
+module.exports = TextField;
+
+},{"./View":21}],21:[function(require,module,exports){
+class View {
+  static get LAYOUT_TYPE() {
+    return {
+      FRAME: 0,
+      CONSTRAINTS: 1
+    };
+  }
+
+  constructor(nativeView = null) {
+    this._subviews = [];
+    this._nativeView = nativeView || NSView.alloc().initWithFrame(NSMakeRect(0, 0, 0, 0));
+    this.setLayoutType(this.constructor.LAYOUT_TYPE.CONSTRAINTS);
+  }
+
+  get nativeView() {
+    return this._nativeView;
+  }
+
+  setFrame(frame) {
+    this.nativeView.setFrame(frame);
+  }
+
+  addSubview(subview) {
+    this._subviews.push(subview);
+    this.nativeView.addSubview(subview.nativeView);
+  }
+
+  addVisualConstraint(constraintStr, mapping) {
+    const nativeMapping = {};
+    Object.keys(mapping).forEach(function(key) {
+      nativeMapping[key] = mapping[key].nativeView;
+    });
+    const constraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(constraintStr, 0, null, nativeMapping);
+    this.nativeView.addConstraints(constraints);
+  }
+
+  addConstraint(opts) {
+    opts = Object.assign({ multiplier: 1, constant: 0, relatedBy: NSLayoutRelationEqual }, opts);
+    const { to, attr, relatedBy, multiplier, constant } = opts;
+    NSLayoutConstraint.constraintWithItem_attribute_relatedBy_toItem_attribute_multiplier_constant(
+      this.nativeView, attr, relatedBy, to.nativeView, attr, multiplier, constant
+    ).setActive(true);
+  }
+
+  setLayoutType(type) {
+    const frameType = this.constructor.LAYOUT_TYPE.FRAME;
+    this.nativeView.setTranslatesAutoresizingMaskIntoConstraints(type == frameType);
+  }
+}
+
+module.exports = View;
+
+},{}],22:[function(require,module,exports){
+class Window {
+  constructor() {
+    const x = 0, y = 0, w = 500, h = 300;
+    this._views = [];
+    this._frame = NSMakeRect(x, y, w, h);
+    this._alert = NSAlert.new();
+  }
+
+  _layout() {
+    if (!this._views) {
+      return;
+    }
+
+    let height = 0;
+    const sup = NSView.alloc().initWithFrame(this._frame);
+
+    this._views.reverse().forEach((view) => {
+      const currentFrame = view.bounds();
+
+      currentFrame.origin.y = height;
+
+      height += currentFrame.size.height + 8;
+
+      view.setFrame(currentFrame);
+
+      sup.addSubview(view);
+    });
+
+    const viewFrame = sup.frame();
+    if (viewFrame.size.height <= height) {
+      viewFrame.size.height = height;
+    }
+
+    sup.setFrame(viewFrame);
+    this._alert.setAccessoryView(sup);
+  }
+
+  addAccessoryView(view) {
+    this._views.push(view);
+  }
+
+  setMessageText(messageText) {
+    this._alert.setMessageText(messageText);
+  }
+
+  setInformativeText(informativeText) {
+    this._alert.setInformativeText(informativeText);
+  }
+
+  messageText() {
+    return this._alert.messageText;
+  }
+
+  informativeText() {
+    return this._alert.informativeText;
+  }
+
+  addButtonWithTitle(title) {
+    this._alert.addButtonWithTitle(title);
+    return this;
+  }
+
+  buttons() {
+    return this._alert.buttons();
+  }
+
+  close() {
+    NSApp.endSheet(this._alert.window());
+  }
+
+  runModal() {
+    this._layout();
+
+    return this._alert.runModal();
+  }
+}
+
+module.exports = Window;
+
+},{}],23:[function(require,module,exports){
+module.exports = {
+  TITLE: 'Opale Translate',
+  MESSAGES: {
+    WRONG_SELECTION: 'Only Artboards can be translated by this plugin',
+    EMPTY_SELECTION: 'Please select an artboard to be translated',
+  },
+  SCALE_FACTOR: 0.5
+};
+
+},{}],24:[function(require,module,exports){
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Iterator = require('./Iterator');
+
+var _require = require('./Parsers'),
+    ExcelParser = _require.ExcelParser;
+
+var AlertWindow = require('./AlertWindow');
+var FilePickerButton = require('./FilePickerButton');
+var Delegator = require('./Delegator');
+var Window = require('./Window');
+
+var _require2 = require('./consts'),
+    TITLE = _require2.TITLE,
+    MESSAGES = _require2.MESSAGES;
+
+var View = require('./View');
+var TextField = require('./TextField');
+var DropdownButton = require('./DropdownButton');
+var Row = require('./Row');
+var ImageView = require('./ImageView');
+var Checkbox = require('./Checkbox');
+var Button = require('./Button');
+
+var ALERT = new AlertWindow(TITLE);
+
+var OPTIONS = {
+  APPLY_TO: {
+    SELECTED_ARTBOARDS: 0
+  },
+  ADD_ARTBOARD_TO: {
+    THE_RIGHT: 0
+  },
+  CASE_MATCHING: {
+    SENSITIVE: 0
+  }
+};
+
+translate = function translate(context) {
+  new TextReplacer(context).run();
+};
+
+var TextReplacer = function () {
+  function TextReplacer(context) {
+    _classCallCheck(this, TextReplacer);
+
+    this.context = context;
+    this.state = {
+      applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+      addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+      caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+      firstRowForSuffix: true
+    };
+    this.content = {};
+    this.window = new Window();
+  }
+
+  _createClass(TextReplacer, [{
+    key: '_translateTexts',
+    value: function _translateTexts() {
+      if (this._verifySelection()) {
+        var api = this.context.api();
+        var selectedLayers = api.selectedDocument.selectedLayers;
+        var selection = new Iterator(selectedLayers);
+        var artboards = selection.filter(function (layer) {
+          return layer.isArtboard;
+        });
+        var parser = new ExcelParser(this.state.firstRowForSuffix);
+        var translatedContent = parser.parse(this.content);
+        artboards.forEach(function (layer) {
+          var frame = layer.frame;
+
+          var _loop = function _loop(key) {
+            var translations = translatedContent[key];
+            var duplicatedLayer = layer.duplicate();
+            frame.offset(frame.width + 20, 0);
+            duplicatedLayer.frame = frame;
+            duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+            var iterator = new Iterator([duplicatedLayer]);
+            var texts = iterator.filter(function (layer) {
+              return layer.isText;
+            }, true);
+            texts.forEach(function (layer) {
+              var text = String(layer.text);
+              if (translations.hasOwnProperty(layer.text)) {
+                var translation = translations[text];
+                layer.text = translation;
+              }
+            });
+          };
+
+          for (var key in translatedContent) {
+            _loop(key);
+          }
+        });
+        this.window.close();
+      }
+    }
+  }, {
+    key: '_buildView',
+    value: function _buildView() {
+      var replacer = this;
+      var context = this.context;
+      var window = this.window;
+      var state = this.state;
+
+      window.setMessageText('Opale Translate');
+      window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
+
+      var fileSelectButton = new FilePickerButton('Select a spreadsheet');
+      fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+      fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
+      fileSelectButton.onFileSelected(function (files) {
+        var result = {};
+        if (files.length < 1) {
+          return result;
+        }
+        var filename = String(files[0]).split('\\').pop().split('/').pop();
+        fileSelectButton.setLabel('Spreadsheet: ' + filename);
+        for (var i = 0; i < files.length; i++) {
+          var fullpath = files[i];
+
+          var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+          var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
+          result[_filename] = content;
+          replacer.content = result;
+        }
+        replaceBtn.setEnabled(true);
+      });
+
+      window.addAccessoryView(fileSelectButton.nativeView);
+
+      var preview = new View();
+      preview.setFrame(NSMakeRect(0, 0, 480, 180));
+
+      var imgView = new ImageView(context);
+      imgView.setImageFromResource('grid_suffix.png');
+
+      var checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
+      checkBox.onSelectionChanged(function (checked) {
+        var resource = checked ? 'grid_suffix.png' : 'grid.png';
+        imgView.setImageFromResource(resource);
+        state.firstRowForSuffix = checked;
+      });
+
+      var previewSubviews = { imgView: imgView, checkBox: checkBox };
+      preview.addSubview(imgView);
+      preview.addSubview(checkBox);
+      preview.addVisualConstraint('H:|-0-[imgView(348)]-[checkBox]->=0-|', previewSubviews);
+      preview.addVisualConstraint('V:|-0-[imgView(180)]->=0-|', previewSubviews);
+      preview.addVisualConstraint('V:|-7-[checkBox]->=0-|', previewSubviews);
+
+      window.addAccessoryView(preview.nativeView);
+
+      var applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var applyToDropdown = new DropdownButton().addItems(['Selected artboards']).onSelectionChanged(function (idx) {
+        state.applyTo = idx;
+      });
+      var applyToRow = new Row(applyToLabel, applyToDropdown);
+
+      var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var artboardPositionDropdown = new DropdownButton().addItems(['Right']).onSelectionChanged(function () {
+        state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
+      });
+      var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
+
+      var caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var caseDropdown = new DropdownButton().addItems(['Case sensitive']).onSelectionChanged(function () {
+        state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
+      });
+      var caseRow = new Row(caseLabel, caseDropdown);
+
+      var dropdownsView = new View();
+      dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
+      dropdownsView.addSubview(applyToRow);
+      dropdownsView.addSubview(artboardRow);
+      dropdownsView.addSubview(caseRow);
+      dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]|', { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
+      artboardRow.alignWith(applyToRow);
+      caseRow.alignWith(applyToRow);
+
+      window.addAccessoryView(dropdownsView.nativeView);
+
+      window.addButtonWithTitle('Replace text');
+      window.addButtonWithTitle('Cancel');
+
+      var btns = window.buttons();
+      var replaceBtn = btns[0];
+      var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
+          return replacer._translateTexts();
+        } });
+      var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+      replaceBtn.setTarget(replaceDelegator);
+      replaceBtn.setAction('callback');
+      replaceBtn.setEnabled(false);
+      replaceBtn.setHighlighted(true);
+
+      var CancelButtonDelegator = new Delegator({ callback: function callback() {
+          return window.close();
+        } });
+      var cancelDelegator = CancelButtonDelegator.getClassInstance();
+      var cancelBtn = btns[1];
+      cancelBtn.setTarget(cancelDelegator);
+      cancelBtn.setAction('callback');
+      cancelBtn.setHighlighted(false);
+
+      var btn = new Button('test');
+      btns.push(btn);
+    }
+  }, {
+    key: '_verifySelection',
+    value: function _verifySelection() {
+      var api = this.context.api();
+      var selectedLayers = api.selectedDocument.selectedLayers;
+      var selection = new Iterator(selectedLayers);
+
+      if (selection.count() == 0) {
+        ALERT.show(MESSAGES.EMPTY_SELECTION);
+        return false;
+      }
+
+      var artboards = selection.filter(function (layer) {
+        return layer.isArtboard;
+      });
+
+      if (artboards.count() != selection.count()) {
+        ALERT.show(MESSAGES.WRONG_SELECTION);
+        return false;
+      }
+
+      return true;
+    }
+  }, {
+    key: 'run',
+    value: function run() {
+      this._buildView();
+      this.window.runModal();
+    }
+  }]);
+
+  return TextReplacer;
+}();
+},{"./AlertWindow":9,"./Button":10,"./Checkbox":11,"./Delegator":12,"./DropdownButton":13,"./FilePickerButton":15,"./ImageView":16,"./Iterator":17,"./Parsers":18,"./Row":19,"./TextField":20,"./View":21,"./Window":22,"./consts":23}]},{},[24])

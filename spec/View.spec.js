@@ -1,5 +1,5 @@
 describe('View', function() {
-  const View = require('../i18n.sketchplugin/Contents/Sketch/View');
+  const View = require('../opale_translate.sketchplugin/Contents/Sketch/View');
   const { VisualConstraint, RelativeConstraint } = require('./helpers/mock/NSLayoutConstraint');
 
   beforeEach(() => {

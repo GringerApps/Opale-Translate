@@ -1,5 +1,5 @@
 describe('ImageView', function() {
-  const ImageView = require('../i18n.sketchplugin/Contents/Sketch/ImageView');
+  const ImageView = require('../opale_translate.sketchplugin/Contents/Sketch/ImageView');
   const Context = require('./helpers/mock/context');
 
   beforeEach(() => {

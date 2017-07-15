@@ -1,5 +1,5 @@
 describe('FilePicker', function() {
-  const FilePicker = require('../i18n.sketchplugin/Contents/Sketch/FilePicker');
+  const FilePicker = require('../opale_translate.sketchplugin/Contents/Sketch/FilePicker');
 
   beforeEach(() => {
     NSOpenPanel.reset();

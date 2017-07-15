@@ -1,5 +1,5 @@
 describe('Checkbox', function() {
-  const Checkbox = require('../i18n.sketchplugin/Contents/Sketch/Checkbox');
+  const Checkbox = require('../opale_translate.sketchplugin/Contents/Sketch/Checkbox');
 
   beforeEach(() => {
     NSButton.reset();
