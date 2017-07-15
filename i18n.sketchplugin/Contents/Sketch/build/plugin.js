@@ -53,7 +53,7 @@ class Button extends View {
 
 module.exports = Button;
 
-},{"./Delegator":4,"./View":11}],3:[function(require,module,exports){
+},{"./Delegator":4,"./View":13}],3:[function(require,module,exports){
 const View = require('./View');
 const Delegator = require('./Delegator');
 
@@ -88,7 +88,7 @@ class Checkbox extends View {
 }
 module.exports = Checkbox;
 
-},{"./Delegator":4,"./View":11}],4:[function(require,module,exports){
+},{"./Delegator":4,"./View":13}],4:[function(require,module,exports){
 class Delegator {
   constructor(selectorHandlerDict, superclass) {
     this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
@@ -131,6 +131,54 @@ class Delegator {
 module.exports = Delegator;
 
 },{}],5:[function(require,module,exports){
+const Delegator = require('./Delegator');
+const View = require('./View');
+
+class DropdownButton extends View {
+  constructor(pullsDown = false) {
+    const btn = NSPopUpButton.alloc().init();
+    btn.pullsdown = pullsDown;
+    super(btn);
+
+    const self = this;
+    const NSPopUpButtonDelegator = new Delegator({
+      callback: () => {
+        self._selectionChanged();
+      }
+    });
+    const delegator = NSPopUpButtonDelegator.getClassInstance();
+
+    btn.setAction('callback');
+    btn.setTarget(delegator);
+
+    this._selectionChangedCallback = () => {};
+  }
+
+  _selectionChanged() {
+    const idx = this.nativeView.indexOfSelectedItem();
+    const title = this.nativeView.titleOfSelectedItem();
+    this._selectionChangedCallback(idx, title);
+  }
+
+  onSelectionChanged(callback) {
+    this._selectionChangedCallback = callback;
+    return this;
+  }
+
+  addItem(title) {
+    this.nativeView.addItemWithTitle(title);
+    return this;
+  }
+
+  addItems(titles) {
+    this.nativeView.addItemsWithTitles(titles);
+    return this;
+  }
+}
+
+module.exports = DropdownButton;
+
+},{"./Delegator":4,"./View":13}],6:[function(require,module,exports){
 class FilePicker {
   constructor() {
     const panel = NSOpenPanel.openPanel();
@@ -159,7 +207,7 @@ class FilePicker {
 
 module.exports = FilePicker;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 const FilePicker = require('./FilePicker');
 const View = require('./View');
 const Button = require('./Button');
@@ -215,7 +263,7 @@ class FilePickerButton extends View {
 
 module.exports = FilePickerButton;
 
-},{"./Button":2,"./FilePicker":5,"./TextField":10,"./View":11}],7:[function(require,module,exports){
+},{"./Button":2,"./FilePicker":6,"./TextField":12,"./View":13}],8:[function(require,module,exports){
 const View = require('./View');
 
 class ImageView extends View {
@@ -242,7 +290,7 @@ class ImageView extends View {
 
 module.exports = ImageView;
 
-},{"./View":11}],8:[function(require,module,exports){
+},{"./View":13}],9:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -329,7 +377,7 @@ class Iterator {
 
 module.exports = Iterator;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 const XLSX = require('xlsx');
 
 class I18nGoParser {
@@ -393,7 +441,30 @@ module.exports = {
   ExcelParser
 };
 
-},{"xlsx":22}],10:[function(require,module,exports){
+},{"xlsx":24}],11:[function(require,module,exports){
+const View = require('./View');
+
+class Row extends View {
+  constructor(left, right) {
+    super();
+    this.left = left;
+    this.right = right;
+    this.nativeView.addSubview(left.nativeView);
+    this.nativeView.addSubview(right.nativeView);
+    this.addVisualConstraint('H:|-0-[left]-[right]->=0-|', { left: left, right: right });
+    this.addVisualConstraint('V:|-0-[left]-0-|', { left: left });
+    this.addVisualConstraint('V:|-0-[right]-0-|', { right: right });
+  }
+
+  alignWith(row) {
+    this.left.addConstraint({ to: row.left, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
+    this.right.addConstraint({ to: row.right, attr: NSLayoutAttributeWidth, relatedBy: NSLayoutRelationEqual });
+  }
+}
+
+module.exports = Row;
+
+},{"./View":13}],12:[function(require,module,exports){
 const View = require('./View');
 
 class TextField extends View {
@@ -448,7 +519,7 @@ class TextField extends View {
 
 module.exports = TextField;
 
-},{"./View":11}],11:[function(require,module,exports){
+},{"./View":13}],13:[function(require,module,exports){
 class View {
   static get LAYOUT_TYPE() {
     return {
@@ -501,7 +572,7 @@ class View {
 
 module.exports = View;
 
-},{}],12:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 class Window {
   constructor() {
     const x = 0, y = 0, w = 500, h = 300;
@@ -581,7 +652,7 @@ class Window {
 
 module.exports = Window;
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 module.exports = {
   TITLE: 'Opal Translate',
   MESSAGES: {
@@ -591,7 +662,11 @@ module.exports = {
   SCALE_FACTOR: 0.5
 };
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 var Iterator = require('./Iterator');
 
 var _require = require('./Parsers'),
@@ -607,69 +682,14 @@ var _require2 = require('./consts'),
     MESSAGES = _require2.MESSAGES;
 
 var View = require('./View');
+var TextField = require('./TextField');
+var DropdownButton = require('./DropdownButton');
+var Row = require('./Row');
 var ImageView = require('./ImageView');
 var Checkbox = require('./Checkbox');
 var Button = require('./Button');
 
 var ALERT = new AlertWindow(TITLE);
-
-var verifySelection = function verifySelection(api) {
-  var selectedLayers = api.selectedDocument.selectedLayers;
-  var selection = new Iterator(selectedLayers);
-
-  if (selection.count() == 0) {
-    ALERT.show(MESSAGES.EMPTY_SELECTION);
-    return false;
-  }
-
-  var artboards = selection.filter(function (layer) {
-    return layer.isArtboard;
-  });
-
-  if (artboards.count() != selection.count()) {
-    ALERT.show(MESSAGES.WRONG_SELECTION);
-    return false;
-  }
-
-  return true;
-};
-
-var translateTexts = function translateTexts(api, state, window) {
-  if (verifySelection(api)) {
-    var selectedLayers = api.selectedDocument.selectedLayers;
-    var selection = new Iterator(selectedLayers);
-    var artboards = selection.filter(function (layer) {
-      return layer.isArtboard;
-    });
-    var parser = new ExcelParser(state.firstRowForSuffix);
-    var translatedContent = parser.parse(state.content);
-    artboards.forEach(function (layer) {
-      var frame = layer.frame;
-
-      var _loop = function _loop(key) {
-        var translations = translatedContent[key];
-        var duplicatedLayer = layer.duplicate();
-        frame.offset(frame.width + 20, 0);
-        duplicatedLayer.frame = frame;
-        duplicatedLayer.name = duplicatedLayer.name + '-' + key;
-        var iterator = new Iterator([duplicatedLayer]);
-        var texts = iterator.filter(function (layer) {
-          return layer.isText;
-        }, true);
-        texts.forEach(function (layer) {
-          var text = String(layer.text);
-          var translation = translations[text] || text;
-          layer.text = translation;
-        });
-      };
-
-      for (var key in translatedContent) {
-        _loop(key);
-      }
-    });
-    window.close();
-  }
-};
 
 var OPTIONS = {
   APPLY_TO: {
@@ -683,96 +703,207 @@ var OPTIONS = {
   }
 };
 
-var buildView = function buildView(context, state) {
-  var api = context.api();
-  var window = new Window();
-  window.setMessageText('Opale');
-  window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
-
-  var fileSelectButton = new FilePickerButton('Select a spreadsheet');
-  fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
-  fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
-  fileSelectButton.onFileSelected(function (files) {
-    var result = {};
-    if (files.length < 1) {
-      return result;
-    }
-    var filename = String(files[0]).split('\\').pop().split('/').pop();
-    fileSelectButton.setLabel('Spreadsheet: ' + filename);
-    for (var i = 0; i < files.length; i++) {
-      var fullpath = files[i];
-
-      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-      var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
-      result[_filename] = content;
-      state.content = result;
-    }
-  });
-
-  window.addAccessoryView(fileSelectButton.nativeView);
-
-  var preview = new View();
-  preview.setFrame(NSMakeRect(0, 0, 480, 180));
-
-  var imgView = new ImageView(context);
-  imgView.setImageFromResource('grid_suffix.png');
-
-  var checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
-  checkBox.onSelectionChanged(function (checked) {
-    var resource = checked ? 'grid_suffix.png' : 'grid.png';
-    imgView.setImageFromResource(resource);
-    state.firstRowForSuffix = checked;
-  });
-
-  var previewSubviews = { imgView: imgView, checkBox: checkBox };
-  preview.addSubview(imgView);
-  preview.addSubview(checkBox);
-  preview.addVisualConstraint('H:|-0-[imgView(348)]-[checkBox]->=0-|', previewSubviews);
-  preview.addVisualConstraint('V:|-0-[imgView(180)]->=0-|', previewSubviews);
-  preview.addVisualConstraint('V:|-7-[checkBox]->=0-|', previewSubviews);
-
-  window.addAccessoryView(preview.nativeView);
-  window.addButtonWithTitle('Replace text');
-  window.addButtonWithTitle('Cancel');
-
-  var btns = window.buttons();
-  var replaceBtn = btns[0];
-  var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
-      return translateTexts(api, state, window);
-    } });
-  var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
-  replaceBtn.setTarget(replaceDelegator);
-  replaceBtn.setAction('callback');
-  replaceBtn.setHighlighted(true);
-
-  var CancelButtonDelegator = new Delegator({ callback: function callback() {
-      return window.close();
-    } });
-  var cancelDelegator = CancelButtonDelegator.getClassInstance();
-  var cancelBtn = btns[1];
-  cancelBtn.setTarget(cancelDelegator);
-  cancelBtn.setAction('callback');
-  cancelBtn.setHighlighted(false);
-
-  var btn = new Button('test');
-  btns.push(btn);
-
-  return window;
-};
-
 translate = function translate(context) {
-  var state = {
-    applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
-    addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
-    caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-    firstRowForSuffix: true,
-    content: {}
-  };
-
-  var window = buildView(context, state);
-  window.runModal();
+  new TextReplacer(context).run();
 };
-},{"./AlertWindow":1,"./Button":2,"./Checkbox":3,"./Delegator":4,"./FilePickerButton":6,"./ImageView":7,"./Iterator":8,"./Parsers":9,"./View":11,"./Window":12,"./consts":13}],15:[function(require,module,exports){
+
+var TextReplacer = function () {
+  function TextReplacer(context) {
+    _classCallCheck(this, TextReplacer);
+
+    this.context = context;
+    this.state = {
+      applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+      addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+      caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+      firstRowForSuffix: true
+    };
+    this.content = {};
+    this.window = new Window();
+  }
+
+  _createClass(TextReplacer, [{
+    key: '_translateTexts',
+    value: function _translateTexts() {
+      if (this._verifySelection()) {
+        var api = this.context.api();
+        var selectedLayers = api.selectedDocument.selectedLayers;
+        var selection = new Iterator(selectedLayers);
+        var artboards = selection.filter(function (layer) {
+          return layer.isArtboard;
+        });
+        var parser = new ExcelParser(this.state.firstRowForSuffix);
+        var translatedContent = parser.parse(this.content);
+        artboards.forEach(function (layer) {
+          var frame = layer.frame;
+
+          var _loop = function _loop(key) {
+            var translations = translatedContent[key];
+            var duplicatedLayer = layer.duplicate();
+            frame.offset(frame.width + 20, 0);
+            duplicatedLayer.frame = frame;
+            duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+            var iterator = new Iterator([duplicatedLayer]);
+            var texts = iterator.filter(function (layer) {
+              return layer.isText;
+            }, true);
+            texts.forEach(function (layer) {
+              var text = String(layer.text);
+              var translation = translations[text] || text;
+              layer.text = translation;
+            });
+          };
+
+          for (var key in translatedContent) {
+            _loop(key);
+          }
+        });
+        this.window.close();
+      }
+    }
+  }, {
+    key: '_buildView',
+    value: function _buildView() {
+      var replacer = this;
+      var context = this.context;
+      var window = this.window;
+      var state = this.state;
+
+      window.setMessageText('Opale');
+      window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
+
+      var fileSelectButton = new FilePickerButton('Select a spreadsheet');
+      fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+      fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
+      fileSelectButton.onFileSelected(function (files) {
+        var result = {};
+        if (files.length < 1) {
+          return result;
+        }
+        var filename = String(files[0]).split('\\').pop().split('/').pop();
+        fileSelectButton.setLabel('Spreadsheet: ' + filename);
+        for (var i = 0; i < files.length; i++) {
+          var fullpath = files[i];
+
+          var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+          var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
+          result[_filename] = content;
+          replacer.content = result;
+        }
+      });
+
+      window.addAccessoryView(fileSelectButton.nativeView);
+
+      var preview = new View();
+      preview.setFrame(NSMakeRect(0, 0, 480, 180));
+
+      var imgView = new ImageView(context);
+      imgView.setImageFromResource('grid_suffix.png');
+
+      var checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
+      checkBox.onSelectionChanged(function (checked) {
+        var resource = checked ? 'grid_suffix.png' : 'grid.png';
+        imgView.setImageFromResource(resource);
+        state.firstRowForSuffix = checked;
+      });
+
+      var previewSubviews = { imgView: imgView, checkBox: checkBox };
+      preview.addSubview(imgView);
+      preview.addSubview(checkBox);
+      preview.addVisualConstraint('H:|-0-[imgView(348)]-[checkBox]->=0-|', previewSubviews);
+      preview.addVisualConstraint('V:|-0-[imgView(180)]->=0-|', previewSubviews);
+      preview.addVisualConstraint('V:|-7-[checkBox]->=0-|', previewSubviews);
+
+      window.addAccessoryView(preview.nativeView);
+
+      var applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var applyToDropdown = new DropdownButton().addItems(['Selected artboards']).onSelectionChanged(function (idx) {
+        state.applyTo = idx;
+      });
+      var applyToRow = new Row(applyToLabel, applyToDropdown);
+
+      var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var artboardPositionDropdown = new DropdownButton().addItems(['Right']).onSelectionChanged(function () {
+        state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
+      });
+      var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
+
+      var caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
+      var caseDropdown = new DropdownButton().addItems(['Case sensitive']).onSelectionChanged(function () {
+        state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
+      });
+      var caseRow = new Row(caseLabel, caseDropdown);
+
+      var dropdownsView = new View();
+      dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
+      dropdownsView.addSubview(applyToRow);
+      dropdownsView.addSubview(artboardRow);
+      dropdownsView.addSubview(caseRow);
+      dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]|', { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
+      artboardRow.alignWith(applyToRow);
+      caseRow.alignWith(applyToRow);
+
+      window.addAccessoryView(dropdownsView.nativeView);
+
+      window.addButtonWithTitle('Replace text');
+      window.addButtonWithTitle('Cancel');
+
+      var btns = window.buttons();
+      var replaceBtn = btns[0];
+      var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
+          return replacer._translateTexts();
+        } });
+      var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+      replaceBtn.setTarget(replaceDelegator);
+      replaceBtn.setAction('callback');
+      replaceBtn.setHighlighted(true);
+
+      var CancelButtonDelegator = new Delegator({ callback: function callback() {
+          return window.close();
+        } });
+      var cancelDelegator = CancelButtonDelegator.getClassInstance();
+      var cancelBtn = btns[1];
+      cancelBtn.setTarget(cancelDelegator);
+      cancelBtn.setAction('callback');
+      cancelBtn.setHighlighted(false);
+
+      var btn = new Button('test');
+      btns.push(btn);
+    }
+  }, {
+    key: '_verifySelection',
+    value: function _verifySelection() {
+      var api = this.context.api();
+      var selectedLayers = api.selectedDocument.selectedLayers;
+      var selection = new Iterator(selectedLayers);
+
+      if (selection.count() == 0) {
+        ALERT.show(MESSAGES.EMPTY_SELECTION);
+        return false;
+      }
+
+      var artboards = selection.filter(function (layer) {
+        return layer.isArtboard;
+      });
+
+      if (artboards.count() != selection.count()) {
+        ALERT.show(MESSAGES.WRONG_SELECTION);
+        return false;
+      }
+
+      return true;
+    }
+  }, {
+    key: 'run',
+    value: function run() {
+      this._buildView();
+      this.window.runModal();
+    }
+  }]);
+
+  return TextReplacer;
+}();
+},{"./AlertWindow":1,"./Button":2,"./Checkbox":3,"./Delegator":4,"./DropdownButton":5,"./FilePickerButton":7,"./ImageView":8,"./Iterator":9,"./Parsers":10,"./Row":11,"./TextField":12,"./View":13,"./Window":14,"./consts":15}],17:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -898,9 +1029,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -2011,7 +2142,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":15,"ieee754":19}],18:[function(require,module,exports){
+},{"base64-js":17,"ieee754":21}],20:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2076,7 +2207,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -2162,7 +2293,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
@@ -3657,7 +3788,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":17}],21:[function(require,module,exports){
+},{"buffer":19}],23:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -12649,7 +12780,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":17}],22:[function(require,module,exports){
+},{"buffer":19}],24:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -30575,4 +30706,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":20,"./jszip.js":21,"buffer":17,"crypto":16,"fs":16,"km4Umf":18,"stream":16}]},{},[14])
+},{"./dist/cpexcel.js":22,"./jszip.js":23,"buffer":19,"crypto":18,"fs":18,"km4Umf":20,"stream":18}]},{},[16])

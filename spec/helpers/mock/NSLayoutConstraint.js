@@ -19,7 +19,7 @@ NSLayoutConstraint = class NSLayoutConstraint {
 };
 
 class RelativeConstraint extends NSLayoutConstraint {
-  constructor({ item, attribute, relatedBy, toItem, toAttribute, multiplier, constant }) {
+  constructor({ item, attribute = NSLayoutAttributeWidth, relatedBy = NSLayoutRelationEqual, toItem, toAttribute = NSLayoutAttributeWidth, multiplier = 1, constant = 0}) {
     super();
     this._item = item;
     this._attribute = attribute;
@@ -32,7 +32,7 @@ class RelativeConstraint extends NSLayoutConstraint {
 }
 
 class VisualConstraint extends NSLayoutConstraint {
-  constructor({ format, options, metrics, views }) {
+  constructor({ format, options = 0, metrics = null, views }) {
     super();
     this._format = format;
     this._options = options;

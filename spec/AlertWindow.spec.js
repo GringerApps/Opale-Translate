@@ -5,7 +5,7 @@ describe('AlertWindow', function() {
 
   describe('new AlertWindow()', () => {
     it('creates a COAlertWindow', () => {
-      const alert = new AlertWindow('test');
+      new AlertWindow('test');
 
       const window = COSAlertWindow.instance();
 

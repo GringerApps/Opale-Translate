@@ -1,13 +1,12 @@
 describe('TextField', function() {
   const TextField = require('../i18n.sketchplugin/Contents/Sketch/TextField');
-  const { VisualConstraint, RelativeConstraint } = require('./helpers/mock/NSLayoutConstraint');
 
   beforeEach(() => {
     NSTextField.reset();
   });
 
   describe ('constructor', () => {
-    it('sets the propertie of the native text field', () => {
+    it('sets the properties of the native text field', () => {
       const view = new TextField('Yo');
       const nativeTextField = view.nativeView;
 
