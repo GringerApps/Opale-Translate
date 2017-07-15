@@ -64,8 +64,10 @@ class TextReplacer {
           const texts = iterator.filter((layer) => layer.isText, true);
           texts.forEach((layer) => {
             const text = String(layer.text);
-            const translation = translations[text] || text;
-            layer.text = translation;
+            if(translations.hasOwnProperty(layer.text)) {
+              const translation = translations[text];
+              layer.text = translation;
+            }
           });
         }
       });
