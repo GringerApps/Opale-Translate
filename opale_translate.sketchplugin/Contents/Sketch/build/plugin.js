@@ -30500,7 +30500,8 @@ var ALERT = new AlertWindow(TITLE);
 
 var OPTIONS = {
   APPLY_TO: {
-    SELECTED_ARTBOARDS: 0
+    SELECTED_ARTBOARDS: 0,
+    CURRENT_PAGE: 1
   },
   ADD_ARTBOARD_TO: {
     THE_RIGHT: 0,
@@ -30538,11 +30539,13 @@ var TextReplacer = function () {
 
       if (this._verifySelection()) {
         var api = this.context.api();
-        var selectedLayers = api.selectedDocument.selectedLayers;
+        var selectedLayers = this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
         var selection = new Iterator(selectedLayers);
         var artboards = selection.filter(function (layer) {
           return layer.isArtboard;
-        });
+        }, this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
+        debug(selectedLayers);
+        debug(artboards);
         var parser = new ExcelParser(this.state.firstRowForSuffix);
         var translatedContent = parser.parse(this.content);
         artboards.forEach(function (layer) {
@@ -30642,7 +30645,7 @@ var TextReplacer = function () {
       window.addAccessoryView(preview.nativeView);
 
       var applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var applyToDropdown = new DropdownButton().addItems(['Selected artboards']).onSelectionChanged(function (idx) {
+      var applyToDropdown = new DropdownButton().addItems(['Selected artboards', 'Current page']).onSelectionChanged(function (idx) {
         state.applyTo = idx;
       });
       var applyToRow = new Row(applyToLabel, applyToDropdown);
@@ -30700,7 +30703,12 @@ var TextReplacer = function () {
     key: '_verifySelection',
     value: function _verifySelection() {
       var api = this.context.api();
-      var selectedLayers = api.selectedDocument.selectedLayers;
+      var selectedDocument = api.selectedDocument;
+
+      if (this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE) {
+        return true;
+      }
+      var selectedLayers = selectedDocument.selectedLayers;
       var selection = new Iterator(selectedLayers);
 
       if (selection.count() == 0) {

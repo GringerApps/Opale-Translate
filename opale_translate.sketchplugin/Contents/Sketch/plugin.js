@@ -17,7 +17,8 @@ const ALERT = new AlertWindow(TITLE);
 
 const OPTIONS = {
   APPLY_TO: {
-    SELECTED_ARTBOARDS: 0
+    SELECTED_ARTBOARDS: 0,
+    CURRENT_PAGE: 1
   },
   ADD_ARTBOARD_TO: {
     THE_RIGHT: 0,
@@ -49,9 +50,9 @@ class TextReplacer {
   _translateTexts() {
     if(this._verifySelection()) {
       const api = this.context.api();
-      const selectedLayers = api.selectedDocument.selectedLayers;
+      const selectedLayers = this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
       const selection = new Iterator(selectedLayers);
-      const artboards = selection.filter((layer) => layer.isArtboard);
+      const artboards = selection.filter((layer) => layer.isArtboard, this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
       const parser = new ExcelParser(this.state.firstRowForSuffix);
       const translatedContent = parser.parse(this.content);
       artboards.forEach((layer) => {
@@ -144,7 +145,7 @@ class TextReplacer {
 
     const applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
     const applyToDropdown = new DropdownButton()
-      .addItems(['Selected artboards'])
+      .addItems(['Selected artboards', 'Current page'])
       .onSelectionChanged((idx) => { state.applyTo = idx; });
     const applyToRow = new Row(applyToLabel, applyToDropdown);
 
@@ -196,7 +197,12 @@ class TextReplacer {
 
   _verifySelection() {
     const api = this.context.api();
-    const selectedLayers = api.selectedDocument.selectedLayers;
+    const selectedDocument = api.selectedDocument;
+
+    if(this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE) {
+      return true;
+    }
+    const selectedLayers = selectedDocument.selectedLayers;
     const selection = new Iterator(selectedLayers);
 
     if (selection.count() == 0) {
