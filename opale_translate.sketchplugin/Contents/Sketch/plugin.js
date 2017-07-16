@@ -20,7 +20,8 @@ const OPTIONS = {
     SELECTED_ARTBOARDS: 0
   },
   ADD_ARTBOARD_TO: {
-    THE_RIGHT: 0
+    THE_RIGHT: 0,
+    THE_BOTTOM: 1
   },
   CASE_MATCHING: {
     SENSITIVE: 0,
@@ -58,7 +59,11 @@ class TextReplacer {
         for (const key in translatedContent) {
           const translations = JSON.parse(JSON.stringify(translatedContent[key]));
           const duplicatedLayer = layer.duplicate();
-          frame.offset(frame.width + 20, 0);
+          if(this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT){
+            frame.offset(frame.width + 20, 0);
+          } else {
+            frame.offset(0, frame.height + 20);
+          }
           duplicatedLayer.frame = frame;
           duplicatedLayer.name = duplicatedLayer.name + '-' + key;
           const iterator = new Iterator([duplicatedLayer]);
@@ -145,8 +150,8 @@ class TextReplacer {
 
     const artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
     const artboardPositionDropdown = new DropdownButton()
-      .addItems(['Right'])
-      .onSelectionChanged(() => { state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT; });
+      .addItems(['Right', "Bottom"])
+      .onSelectionChanged((idx) => { state.addNewArtboardTo = idx; });
     const artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
     const caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);

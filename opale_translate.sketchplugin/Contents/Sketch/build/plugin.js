@@ -30503,7 +30503,8 @@ var OPTIONS = {
     SELECTED_ARTBOARDS: 0
   },
   ADD_ARTBOARD_TO: {
-    THE_RIGHT: 0
+    THE_RIGHT: 0,
+    THE_BOTTOM: 1
   },
   CASE_MATCHING: {
     SENSITIVE: 0,
@@ -30550,7 +30551,11 @@ var TextReplacer = function () {
           var _loop = function _loop(key) {
             var translations = JSON.parse(JSON.stringify(translatedContent[key]));
             var duplicatedLayer = layer.duplicate();
-            frame.offset(frame.width + 20, 0);
+            if (_this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT) {
+              frame.offset(frame.width + 20, 0);
+            } else {
+              frame.offset(0, frame.height + 20);
+            }
             duplicatedLayer.frame = frame;
             duplicatedLayer.name = duplicatedLayer.name + '-' + key;
             var iterator = new Iterator([duplicatedLayer]);
@@ -30643,8 +30648,8 @@ var TextReplacer = function () {
       var applyToRow = new Row(applyToLabel, applyToDropdown);
 
       var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var artboardPositionDropdown = new DropdownButton().addItems(['Right']).onSelectionChanged(function () {
-        state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
+      var artboardPositionDropdown = new DropdownButton().addItems(['Right', "Bottom"]).onSelectionChanged(function (idx) {
+        state.addNewArtboardTo = idx;
       });
       var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
