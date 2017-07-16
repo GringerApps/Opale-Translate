@@ -30492,10 +30492,6 @@ var ImageView = require('./ImageView');
 var Checkbox = require('./Checkbox');
 var Button = require('./Button');
 
-var debug = function debug(obj) {
-  log("Opale: " + JSON.stringify(obj));
-};
-
 var ALERT = new AlertWindow(TITLE);
 
 var OPTIONS = {
@@ -30516,6 +30512,54 @@ var OPTIONS = {
 translate = function translate(context) {
   new TextReplacer(context).run();
 };
+
+var LayerMover = function () {
+  function LayerMover(iterator) {
+    _classCallCheck(this, LayerMover);
+
+    var frames = iterator.map(function (layer) {
+      return layer.frame;
+    });
+    var xmin = Math.min.apply(null, frames.map(function (frame) {
+      return frame.x;
+    }));
+    var ymin = Math.min.apply(null, frames.map(function (frame) {
+      return frame.y;
+    }));
+    var xmax = Math.max.apply(null, frames.map(function (frame) {
+      return frame.x + frame.width;
+    }));
+    var ymax = Math.max.apply(null, frames.map(function (frame) {
+      return frame.y + frame.height;
+    }));
+    this.original_width = this.width = xmax - xmin + 100;
+    this.original_height = this.height = ymax - ymin + 100;
+  }
+
+  _createClass(LayerMover, [{
+    key: 'next',
+    value: function next() {
+      this.width += this.original_width;
+      this.height += this.original_height;
+    }
+  }, {
+    key: 'moveToBottom',
+    value: function moveToBottom(layer) {
+      var frame = layer.frame;
+      frame.offset(0, this.height);
+      layer.frame = frame;
+    }
+  }, {
+    key: 'moveToRight',
+    value: function moveToRight(layer) {
+      var frame = layer.frame;
+      frame.offset(this.width, 0);
+      layer.frame = frame;
+    }
+  }]);
+
+  return LayerMover;
+}();
 
 var TextReplacer = function () {
   function TextReplacer(context) {
@@ -30538,54 +30582,54 @@ var TextReplacer = function () {
       var _this = this;
 
       if (this._verifySelection()) {
-        var api = this.context.api();
-        var selectedLayers = this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
-        var selection = new Iterator(selectedLayers);
-        var artboards = selection.filter(function (layer) {
-          return layer.isArtboard;
-        }, this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
-        debug(selectedLayers);
-        debug(artboards);
-        var parser = new ExcelParser(this.state.firstRowForSuffix);
-        var translatedContent = parser.parse(this.content);
-        artboards.forEach(function (layer) {
-          var frame = layer.frame;
+        (function () {
+          var api = _this.context.api();
+          var selectedLayers = _this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
+          var selection = new Iterator(selectedLayers);
+          var artboards = selection.filter(function (layer) {
+            return layer.isArtboard;
+          }, _this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
+          var mover = new LayerMover(artboards);
+          var parser = new ExcelParser(_this.state.firstRowForSuffix);
+          var translatedContent = parser.parse(_this.content);
 
           var _loop = function _loop(key) {
-            var translations = JSON.parse(JSON.stringify(translatedContent[key]));
-            var duplicatedLayer = layer.duplicate();
-            if (_this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT) {
-              frame.offset(frame.width + 20, 0);
-            } else {
-              frame.offset(0, frame.height + 20);
-            }
-            duplicatedLayer.frame = frame;
-            duplicatedLayer.name = duplicatedLayer.name + '-' + key;
-            var iterator = new Iterator([duplicatedLayer]);
-            var texts = iterator.filter(function (layer) {
-              return layer.isText;
-            }, true);
-            var isCaseSensitive = _this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
-            if (isCaseSensitive) {
-              Object.keys(translations).map(function (key) {
-                translations[key] = translations[key].toLowerCase();
-              });
-            }
-            texts.forEach(function (layer) {
-              var text = String(layer.text);
-              var matchingText = isCaseSensitive ? text : text.toLowerCase();
-              if (translations.hasOwnProperty(matchingText)) {
-                var translation = translations[matchingText];
-                layer.text = translation;
+            artboards.forEach(function (layer) {
+              var translations = JSON.parse(JSON.stringify(translatedContent[key]));
+              var duplicatedLayer = layer.duplicate();
+              if (_this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT) {
+                mover.moveToRight(duplicatedLayer);
+              } else {
+                mover.moveToBottom(duplicatedLayer);
               }
+              duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+              var iterator = new Iterator([duplicatedLayer]);
+              var texts = iterator.filter(function (layer) {
+                return layer.isText;
+              }, true);
+              var isCaseSensitive = _this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
+              if (isCaseSensitive) {
+                Object.keys(translations).map(function (key) {
+                  translations[key] = translations[key].toLowerCase();
+                });
+              }
+              texts.forEach(function (layer) {
+                var text = String(layer.text);
+                var matchingText = isCaseSensitive ? text : text.toLowerCase();
+                if (translations.hasOwnProperty(matchingText)) {
+                  var translation = translations[matchingText];
+                  layer.text = translation;
+                }
+              });
             });
+            mover.next();
           };
 
           for (var key in translatedContent) {
             _loop(key);
           }
-        });
-        this.window.close();
+          _this.window.close();
+        })();
       }
     }
   }, {

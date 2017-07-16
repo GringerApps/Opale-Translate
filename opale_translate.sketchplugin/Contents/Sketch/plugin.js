@@ -34,6 +34,35 @@ translate = (context) => {
   new TextReplacer(context).run();
 };
 
+class LayerMover {
+  constructor(iterator) {
+    const frames = iterator.map((layer) => layer.frame);
+    const xmin = Math.min.apply(null, frames.map((frame) => frame.x));
+    const ymin = Math.min.apply(null, frames.map((frame) => frame.y));
+    const xmax = Math.max.apply(null, frames.map((frame) => frame.x + frame.width));
+    const ymax = Math.max.apply(null, frames.map((frame) => frame.y + frame.height));
+    this.original_width = this.width = xmax - xmin + 100;
+    this.original_height = this.height = ymax - ymin + 100;
+  }
+
+  next() {
+    this.width += this.original_width;
+    this.height += this.original_height;
+  }
+
+  moveToBottom(layer) {
+    const frame = layer.frame;
+    frame.offset(0, this.height);
+    layer.frame = frame;
+  }
+
+  moveToRight(layer) {
+    const frame = layer.frame;
+    frame.offset(this.width, 0);
+    layer.frame = frame;
+  }
+}
+
 class TextReplacer {
   constructor(context) {
     this.context = context;
@@ -53,19 +82,18 @@ class TextReplacer {
       const selectedLayers = this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
       const selection = new Iterator(selectedLayers);
       const artboards = selection.filter((layer) => layer.isArtboard, this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
+      const mover = new LayerMover(artboards);
       const parser = new ExcelParser(this.state.firstRowForSuffix);
       const translatedContent = parser.parse(this.content);
-      artboards.forEach((layer) => {
-        const frame = layer.frame;
-        for (const key in translatedContent) {
+      for (const key in translatedContent) {
+        artboards.forEach((layer) => {
           const translations = JSON.parse(JSON.stringify(translatedContent[key]));
           const duplicatedLayer = layer.duplicate();
           if(this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT){
-            frame.offset(frame.width + 20, 0);
+            mover.moveToRight(duplicatedLayer);
           } else {
-            frame.offset(0, frame.height + 20);
+            mover.moveToBottom(duplicatedLayer);
           }
-          duplicatedLayer.frame = frame;
           duplicatedLayer.name = duplicatedLayer.name + '-' + key;
           const iterator = new Iterator([duplicatedLayer]);
           const texts = iterator.filter((layer) => layer.isText, true);
@@ -83,8 +111,9 @@ class TextReplacer {
               layer.text = translation;
             }
           });
-        }
-      });
+        });
+        mover.next();
+      }
       this.window.close();
     }
   }
