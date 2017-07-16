@@ -23,7 +23,8 @@ const OPTIONS = {
     THE_RIGHT: 0
   },
   CASE_MATCHING: {
-    SENSITIVE: 0
+    SENSITIVE: 0,
+    INSENSITIVE: 1
   }
 };
 
@@ -55,17 +56,24 @@ class TextReplacer {
       artboards.forEach((layer) => {
         const frame = layer.frame;
         for (const key in translatedContent) {
-          const translations = translatedContent[key];
+          const translations = JSON.parse(JSON.stringify(translatedContent[key]));
           const duplicatedLayer = layer.duplicate();
           frame.offset(frame.width + 20, 0);
           duplicatedLayer.frame = frame;
           duplicatedLayer.name = duplicatedLayer.name + '-' + key;
           const iterator = new Iterator([duplicatedLayer]);
           const texts = iterator.filter((layer) => layer.isText, true);
+          const isCaseSensitive = this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
+          if(isCaseSensitive) {
+            Object.keys(translations).map(function(key) {
+              translations[key] = translations[key].toLowerCase();
+            });
+          }
           texts.forEach((layer) => {
             const text = String(layer.text);
-            if(translations.hasOwnProperty(layer.text)) {
-              const translation = translations[text];
+            const matchingText = isCaseSensitive ? text : text.toLowerCase();
+            if(translations.hasOwnProperty(matchingText)) {
+              const translation = translations[matchingText];
               layer.text = translation;
             }
           });
@@ -143,8 +151,8 @@ class TextReplacer {
 
     const caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
     const caseDropdown = new DropdownButton()
-      .addItems(['Case sensitive'])
-      .onSelectionChanged(() => { state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE; });
+      .addItems(['Case sensitive', 'Case insensitive'])
+      .onSelectionChanged((idx) => { state.caseMatching = idx; });
     const caseRow = new Row(caseLabel, caseDropdown);
 
     const dropdownsView = new View();

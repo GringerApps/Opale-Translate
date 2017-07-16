@@ -30492,6 +30492,10 @@ var ImageView = require('./ImageView');
 var Checkbox = require('./Checkbox');
 var Button = require('./Button');
 
+var debug = function debug(obj) {
+  log("Opale: " + JSON.stringify(obj));
+};
+
 var ALERT = new AlertWindow(TITLE);
 
 var OPTIONS = {
@@ -30502,7 +30506,8 @@ var OPTIONS = {
     THE_RIGHT: 0
   },
   CASE_MATCHING: {
-    SENSITIVE: 0
+    SENSITIVE: 0,
+    INSENSITIVE: 1
   }
 };
 
@@ -30528,6 +30533,8 @@ var TextReplacer = function () {
   _createClass(TextReplacer, [{
     key: '_translateTexts',
     value: function _translateTexts() {
+      var _this = this;
+
       if (this._verifySelection()) {
         var api = this.context.api();
         var selectedLayers = api.selectedDocument.selectedLayers;
@@ -30541,7 +30548,7 @@ var TextReplacer = function () {
           var frame = layer.frame;
 
           var _loop = function _loop(key) {
-            var translations = translatedContent[key];
+            var translations = JSON.parse(JSON.stringify(translatedContent[key]));
             var duplicatedLayer = layer.duplicate();
             frame.offset(frame.width + 20, 0);
             duplicatedLayer.frame = frame;
@@ -30550,10 +30557,17 @@ var TextReplacer = function () {
             var texts = iterator.filter(function (layer) {
               return layer.isText;
             }, true);
+            var isCaseSensitive = _this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
+            if (isCaseSensitive) {
+              Object.keys(translations).map(function (key) {
+                translations[key] = translations[key].toLowerCase();
+              });
+            }
             texts.forEach(function (layer) {
               var text = String(layer.text);
-              if (translations.hasOwnProperty(layer.text)) {
-                var translation = translations[text];
+              var matchingText = isCaseSensitive ? text : text.toLowerCase();
+              if (translations.hasOwnProperty(matchingText)) {
+                var translation = translations[matchingText];
                 layer.text = translation;
               }
             });
@@ -30635,8 +30649,8 @@ var TextReplacer = function () {
       var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
       var caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var caseDropdown = new DropdownButton().addItems(['Case sensitive']).onSelectionChanged(function () {
-        state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
+      var caseDropdown = new DropdownButton().addItems(['Case sensitive', 'Case insensitive']).onSelectionChanged(function (idx) {
+        state.caseMatching = idx;
       });
       var caseRow = new Row(caseLabel, caseDropdown);
 
