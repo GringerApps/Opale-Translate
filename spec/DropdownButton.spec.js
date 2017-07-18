@@ -19,7 +19,7 @@ describe('DropdownButton', function() {
       const button = new DropdownButton();
       const nativeView = button.nativeView;
 
-      button.addItems(["item1", "item2"]);
+      button.addItems(['item1', 'item2']);
 
       button.setSelectedAt(1);
 

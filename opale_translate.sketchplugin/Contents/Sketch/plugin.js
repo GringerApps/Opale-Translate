@@ -68,8 +68,8 @@ const DEFAULT_SETTINGS = {
   addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
   firstRowForSuffix: true
-}
-const SETTING_KEY = "com.opale.translate.settings";
+};
+const SETTING_KEY = 'com.opale.translate.settings';
 class Setting {
   constructor(api) {
     this.api = api;
@@ -211,7 +211,7 @@ class TextReplacer {
 
     const artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
     const artboardPositionDropdown = new DropdownButton()
-      .addItems(['Right', "Bottom"])
+      .addItems(['Right', 'Bottom'])
       .setSelectedAt(this.settings.get('addNewArtboardTo'))
       .onSelectionChanged((idx) => { settings.set('addNewArtboardTo', idx); });
     const artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
