@@ -63,15 +63,44 @@ class LayerMover {
   }
 }
 
+const DEFAULT_SETTINGS = {
+  applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+  addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+  caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+  firstRowForSuffix: true
+}
+const SETTING_KEY = "com.opale.translate.settings";
+class Setting {
+  constructor(api) {
+    this.api = api;
+    this.state = Object.assign(DEFAULT_SETTINGS, this._load());
+  }
+
+  get(key) {
+    return this.state[key];
+  }
+
+  set(key, value) {
+    this.state[key] = value;
+  }
+
+  save() {
+    this.api.setSettingForKey(SETTING_KEY, JSON.stringify(this.state));
+  }
+
+  _load() {
+    try {
+      return JSON.parse(this.api.settingForKey(SETTING_KEY));
+    } catch(_) {
+      return {};
+    }
+  }
+}
+
 class TextReplacer {
   constructor(context) {
     this.context = context;
-    this.state = {
-      applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
-      addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
-      caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-      firstRowForSuffix: true
-    };
+    this.settings = new Setting(context.api());
     this.content = {};
     this.window = new Window();
   }
@@ -79,17 +108,17 @@ class TextReplacer {
   _translateTexts() {
     if(this._verifySelection()) {
       const api = this.context.api();
-      const selectedLayers = this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
+      const selectedLayers = this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
       const selection = new Iterator(selectedLayers);
-      const artboards = selection.filter((layer) => layer.isArtboard, this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
+      const artboards = selection.filter((layer) => layer.isArtboard, this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE);
       const mover = new LayerMover(artboards);
-      const parser = new ExcelParser(this.state.firstRowForSuffix);
+      const parser = new ExcelParser(this.settings.get('firstRowForSuffix'));
       const translatedContent = parser.parse(this.content);
       for (const key in translatedContent) {
         artboards.forEach((layer) => {
           const translations = JSON.parse(JSON.stringify(translatedContent[key]));
           const duplicatedLayer = layer.duplicate();
-          if(this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT){
+          if(this.settings.get('addNewArtboardTo') === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT){
             mover.moveToRight(duplicatedLayer);
           } else {
             mover.moveToBottom(duplicatedLayer);
@@ -97,7 +126,7 @@ class TextReplacer {
           duplicatedLayer.name = duplicatedLayer.name + '-' + key;
           const iterator = new Iterator([duplicatedLayer]);
           const texts = iterator.filter((layer) => layer.isText, true);
-          const isCaseSensitive = this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
+          const isCaseSensitive = this.settings.get('caseMatching') == OPTIONS.CASE_MATCHING.SENSITIVE;
           if(isCaseSensitive) {
             Object.keys(translations).map(function(key) {
               translations[key] = translations[key].toLowerCase();
@@ -114,6 +143,7 @@ class TextReplacer {
         });
         mover.next();
       }
+      this.settings.save();
       this.window.close();
     }
   }
@@ -122,7 +152,7 @@ class TextReplacer {
     const replacer = this;
     const context = this.context;
     const window = this.window;
-    const state = this.state;
+    const settings = this.settings;
 
     window.setMessageText('Opale Translate');
     window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
@@ -156,11 +186,11 @@ class TextReplacer {
     const imgView = new ImageView(context);
     imgView.setImageFromResource('grid_suffix.png');
 
-    const checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
+    const checkBox = new Checkbox('Use first row for\nartboard suffixes', this.settings.get('firstRowForSuffix'));
     checkBox.onSelectionChanged((checked) => {
       const resource = checked ? 'grid_suffix.png' : 'grid.png';
       imgView.setImageFromResource(resource);
-      state.firstRowForSuffix = checked;
+      settings.set('firstRowForSuffix', checked);
     });
 
     const previewSubviews = { imgView, checkBox };
@@ -175,19 +205,22 @@ class TextReplacer {
     const applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
     const applyToDropdown = new DropdownButton()
       .addItems(['Selected artboards', 'Current page'])
-      .onSelectionChanged((idx) => { state.applyTo = idx; });
+      .setSelectedAt(this.settings.get('applyTo'))
+      .onSelectionChanged((idx) => { settings.set('applyTo', idx); });
     const applyToRow = new Row(applyToLabel, applyToDropdown);
 
     const artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
     const artboardPositionDropdown = new DropdownButton()
       .addItems(['Right', "Bottom"])
-      .onSelectionChanged((idx) => { state.addNewArtboardTo = idx; });
+      .setSelectedAt(this.settings.get('addNewArtboardTo'))
+      .onSelectionChanged((idx) => { settings.set('addNewArtboardTo', idx); });
     const artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
     const caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
     const caseDropdown = new DropdownButton()
       .addItems(['Case sensitive', 'Case insensitive'])
-      .onSelectionChanged((idx) => { state.caseMatching = idx; });
+      .setSelectedAt(this.settings.get('caseMatching'))
+      .onSelectionChanged((idx) => { settings.set('caseMatching', idx); });
     const caseRow = new Row(caseLabel, caseDropdown);
 
     const dropdownsView = new View();
@@ -228,7 +261,7 @@ class TextReplacer {
     const api = this.context.api();
     const selectedDocument = api.selectedDocument;
 
-    if(this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE) {
+    if(this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE) {
       return true;
     }
     const selectedLayers = selectedDocument.selectedLayers;

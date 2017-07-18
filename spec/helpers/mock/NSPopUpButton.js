@@ -33,6 +33,10 @@ NSPopUpButton = class NSPopUpButton extends NSView {
     return this;
   }
 
+  selectItemAtIndex(idx) {
+    this._indexOfSelectedItem = idx;
+  }
+
   indexOfSelectedItem() {
     return this._indexOfSelectedItem;
   }

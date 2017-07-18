@@ -41,6 +41,11 @@ class DropdownButton extends View {
     this.nativeView.addItemsWithTitles(titles);
     return this;
   }
+
+  setSelectedAt(idx) {
+    this.nativeView.selectItemAtIndex(idx);
+    return this;
+  }
 }
 
 module.exports = DropdownButton;

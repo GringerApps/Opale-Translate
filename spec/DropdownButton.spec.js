@@ -14,6 +14,19 @@ describe('DropdownButton', function() {
     });
   });
 
+  describe ('setSelectedAt', () => {
+    it('sets the selected item', () => {
+      const button = new DropdownButton();
+      const nativeView = button.nativeView;
+
+      button.addItems(["item1", "item2"]);
+
+      button.setSelectedAt(1);
+
+      expect(nativeView._indexOfSelectedItem).toEqual(1);
+    });
+  });
+
   describe('onSelectionChanged', () => {
     it('should set the selection changed callback', () => {
       const button = new DropdownButton();

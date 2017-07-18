@@ -29977,6 +29977,11 @@ class DropdownButton extends View {
     this.nativeView.addItemsWithTitles(titles);
     return this;
   }
+
+  setSelectedAt(idx) {
+    this.nativeView.selectItemAtIndex(idx);
+    return this;
+  }
 }
 
 module.exports = DropdownButton;
@@ -30561,17 +30566,57 @@ var LayerMover = function () {
   return LayerMover;
 }();
 
+var DEFAULT_SETTINGS = {
+  applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
+  addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
+  caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+  firstRowForSuffix: true
+};
+var SETTING_KEY = "com.opale.translate.settings";
+
+var Setting = function () {
+  function Setting(api) {
+    _classCallCheck(this, Setting);
+
+    this.api = api;
+    this.state = Object.assign(DEFAULT_SETTINGS, this._load());
+  }
+
+  _createClass(Setting, [{
+    key: 'get',
+    value: function get(key) {
+      return this.state[key];
+    }
+  }, {
+    key: 'set',
+    value: function set(key, value) {
+      this.state[key] = value;
+    }
+  }, {
+    key: 'save',
+    value: function save() {
+      this.api.setSettingForKey(SETTING_KEY, JSON.stringify(this.state));
+    }
+  }, {
+    key: '_load',
+    value: function _load() {
+      try {
+        return JSON.parse(this.api.settingForKey(SETTING_KEY));
+      } catch (_) {
+        return {};
+      }
+    }
+  }]);
+
+  return Setting;
+}();
+
 var TextReplacer = function () {
   function TextReplacer(context) {
     _classCallCheck(this, TextReplacer);
 
     this.context = context;
-    this.state = {
-      applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
-      addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
-      caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-      firstRowForSuffix: true
-    };
+    this.settings = new Setting(context.api());
     this.content = {};
     this.window = new Window();
   }
@@ -30584,20 +30629,20 @@ var TextReplacer = function () {
       if (this._verifySelection()) {
         (function () {
           var api = _this.context.api();
-          var selectedLayers = _this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
+          var selectedLayers = _this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE ? api.selectedDocument.selectedPage : api.selectedDocument.selectedLayers;
           var selection = new Iterator(selectedLayers);
           var artboards = selection.filter(function (layer) {
             return layer.isArtboard;
-          }, _this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE);
+          }, _this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE);
           var mover = new LayerMover(artboards);
-          var parser = new ExcelParser(_this.state.firstRowForSuffix);
+          var parser = new ExcelParser(_this.settings.get('firstRowForSuffix'));
           var translatedContent = parser.parse(_this.content);
 
           var _loop = function _loop(key) {
             artboards.forEach(function (layer) {
               var translations = JSON.parse(JSON.stringify(translatedContent[key]));
               var duplicatedLayer = layer.duplicate();
-              if (_this.state.addNewArtboardTo === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT) {
+              if (_this.settings.get('addNewArtboardTo') === OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT) {
                 mover.moveToRight(duplicatedLayer);
               } else {
                 mover.moveToBottom(duplicatedLayer);
@@ -30607,7 +30652,7 @@ var TextReplacer = function () {
               var texts = iterator.filter(function (layer) {
                 return layer.isText;
               }, true);
-              var isCaseSensitive = _this.state.caseMatching == OPTIONS.CASE_MATCHING.SENSITIVE;
+              var isCaseSensitive = _this.settings.get('caseMatching') == OPTIONS.CASE_MATCHING.SENSITIVE;
               if (isCaseSensitive) {
                 Object.keys(translations).map(function (key) {
                   translations[key] = translations[key].toLowerCase();
@@ -30628,6 +30673,7 @@ var TextReplacer = function () {
           for (var key in translatedContent) {
             _loop(key);
           }
+          _this.settings.save();
           _this.window.close();
         })();
       }
@@ -30638,7 +30684,7 @@ var TextReplacer = function () {
       var replacer = this;
       var context = this.context;
       var window = this.window;
-      var state = this.state;
+      var settings = this.settings;
 
       window.setMessageText('Opale Translate');
       window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
@@ -30672,11 +30718,11 @@ var TextReplacer = function () {
       var imgView = new ImageView(context);
       imgView.setImageFromResource('grid_suffix.png');
 
-      var checkBox = new Checkbox('Use first row for\nartboard suffixes', true);
+      var checkBox = new Checkbox('Use first row for\nartboard suffixes', this.settings.get('firstRowForSuffix'));
       checkBox.onSelectionChanged(function (checked) {
         var resource = checked ? 'grid_suffix.png' : 'grid.png';
         imgView.setImageFromResource(resource);
-        state.firstRowForSuffix = checked;
+        settings.set('firstRowForSuffix', checked);
       });
 
       var previewSubviews = { imgView: imgView, checkBox: checkBox };
@@ -30689,20 +30735,20 @@ var TextReplacer = function () {
       window.addAccessoryView(preview.nativeView);
 
       var applyToLabel = new TextField('Apply to:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var applyToDropdown = new DropdownButton().addItems(['Selected artboards', 'Current page']).onSelectionChanged(function (idx) {
-        state.applyTo = idx;
+      var applyToDropdown = new DropdownButton().addItems(['Selected artboards', 'Current page']).setSelectedAt(this.settings.get('applyTo')).onSelectionChanged(function (idx) {
+        settings.set('applyTo', idx);
       });
       var applyToRow = new Row(applyToLabel, applyToDropdown);
 
       var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var artboardPositionDropdown = new DropdownButton().addItems(['Right', "Bottom"]).onSelectionChanged(function (idx) {
-        state.addNewArtboardTo = idx;
+      var artboardPositionDropdown = new DropdownButton().addItems(['Right', "Bottom"]).setSelectedAt(this.settings.get('addNewArtboardTo')).onSelectionChanged(function (idx) {
+        settings.set('addNewArtboardTo', idx);
       });
       var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
       var caseLabel = new TextField('Case matching:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var caseDropdown = new DropdownButton().addItems(['Case sensitive', 'Case insensitive']).onSelectionChanged(function (idx) {
-        state.caseMatching = idx;
+      var caseDropdown = new DropdownButton().addItems(['Case sensitive', 'Case insensitive']).setSelectedAt(this.settings.get('caseMatching')).onSelectionChanged(function (idx) {
+        settings.set('caseMatching', idx);
       });
       var caseRow = new Row(caseLabel, caseDropdown);
 
@@ -30749,7 +30795,7 @@ var TextReplacer = function () {
       var api = this.context.api();
       var selectedDocument = api.selectedDocument;
 
-      if (this.state.applyTo === OPTIONS.APPLY_TO.CURRENT_PAGE) {
+      if (this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE) {
         return true;
       }
       var selectedLayers = selectedDocument.selectedLayers;
