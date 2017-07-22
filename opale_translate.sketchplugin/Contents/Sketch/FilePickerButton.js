@@ -36,10 +36,15 @@ class FilePickerButton extends View {
     const picker = this._filePicker;
     picker.show();
     if(picker.choseFiles()) {
-      const files = picker.files();
-      this._button.setTitle('Replace file');
-      this._onFileSelected(files);
+      this.setFiles(picker.files());
     }
+  }
+
+  setFiles(files) {
+    this._button.setTitle('Replace file');
+    this._button.setHighlighted(false);
+
+    this._onFileSelected(files);
   }
 
   setLabel(label) {

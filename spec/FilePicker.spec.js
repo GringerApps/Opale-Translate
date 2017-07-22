@@ -49,7 +49,7 @@ describe('FilePicker', function() {
 
         const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
-        openPanel._filenames.push('./test.xslx');
+        openPanel._filenames._push('./test.xslx');
 
         picker.show();
 
@@ -89,7 +89,7 @@ describe('FilePicker', function() {
 
         const openPanel = NSOpenPanel.instances()[0];
         openPanel._result = NSFileHandlingPanelOKButton;
-        openPanel._filenames.push('./test.xslx');
+        openPanel._filenames._push('./test.xslx');
 
         picker.show();
 

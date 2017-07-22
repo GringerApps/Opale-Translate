@@ -20,7 +20,13 @@ class FilePicker {
   }
 
   files() {
-    return this.panel.filenames();
+    const files = [];
+    const nativeFiles = this.panel.filenames();
+    for(let i = 0; i < nativeFiles.count(); i++) {
+      const file = String(nativeFiles[i]).split('\\').pop();
+      files.push(file);
+    }
+    return files;
   }
 }
 

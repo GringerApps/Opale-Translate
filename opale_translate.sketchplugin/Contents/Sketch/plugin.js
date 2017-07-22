@@ -67,7 +67,8 @@ const DEFAULT_SETTINGS = {
   applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
   addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-  firstRowForSuffix: true
+  firstRowForSuffix: true,
+  filenames: []
 };
 const SETTING_KEY = 'com.opale.translate.settings';
 class Setting {
@@ -156,6 +157,24 @@ class TextReplacer {
 
     window.setMessageText('Opale Translate');
     window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
+    window.addButtonWithTitle('Replace text');
+    window.addButtonWithTitle('Cancel');
+
+    const btns = window.buttons();
+    const replaceBtn = btns[0];
+    const ReplaceButtonDelegator = new Delegator({ callback: () => replacer._translateTexts() });
+    const replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+    replaceBtn.setTarget(replaceDelegator);
+    replaceBtn.setAction('callback');
+    replaceBtn.setEnabled(false);
+    replaceBtn.setHighlighted(true);
+
+    const CancelButtonDelegator = new Delegator({ callback: () => window.close() });
+    const cancelDelegator = CancelButtonDelegator.getClassInstance();
+    const cancelBtn = btns[1];
+    cancelBtn.setTarget(cancelDelegator);
+    cancelBtn.setAction('callback');
+    cancelBtn.setHighlighted(false);
 
     const fileSelectButton = new FilePickerButton('Select a spreadsheet');
     fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
@@ -165,18 +184,19 @@ class TextReplacer {
       if (files.length < 1) {
         return result;
       }
-      const filename = String(files[0]).split('\\').pop().split('/').pop();
+      settings.set('filenames', files);
+      const filename = files[0].split('/').pop();
       fileSelectButton.setLabel('Spreadsheet: ' + filename);
-      for (let i = 0; i < files.length; i++) {
-        const fullpath = files[i];
-
-        const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-        const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
-        result[filename] = content;
-        replacer.content = result;
-      }
+      const fullpath = files[0];
+      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+      result[filename] = content;
+      replacer.content = { default: content };
       replaceBtn.setEnabled(true);
     });
+    const filenames = settings.get('filenames');
+    if(filenames.length != 0){
+      fileSelectButton.setFiles(filenames);
+    }
 
     window.addAccessoryView(fileSelectButton.nativeView);
 
@@ -233,25 +253,6 @@ class TextReplacer {
     caseRow.alignWith(applyToRow);
 
     window.addAccessoryView(dropdownsView.nativeView);
-
-    window.addButtonWithTitle('Replace text');
-    window.addButtonWithTitle('Cancel');
-
-    const btns = window.buttons();
-    const replaceBtn = btns[0];
-    const ReplaceButtonDelegator = new Delegator({ callback: () => replacer._translateTexts() });
-    const replaceDelegator = ReplaceButtonDelegator.getClassInstance();
-    replaceBtn.setTarget(replaceDelegator);
-    replaceBtn.setAction('callback');
-    replaceBtn.setEnabled(false);
-    replaceBtn.setHighlighted(true);
-
-    const CancelButtonDelegator = new Delegator({ callback: () => window.close() });
-    const cancelDelegator = CancelButtonDelegator.getClassInstance();
-    const cancelBtn = btns[1];
-    cancelBtn.setTarget(cancelDelegator);
-    cancelBtn.setAction('callback');
-    cancelBtn.setHighlighted(false);
 
     const btn = new Button('test');
     btns.push(btn);

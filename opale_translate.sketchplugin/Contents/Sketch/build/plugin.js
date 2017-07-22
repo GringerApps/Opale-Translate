@@ -30009,7 +30009,13 @@ class FilePicker {
   }
 
   files() {
-    return this.panel.filenames();
+    const files = [];
+    const nativeFiles = this.panel.filenames();
+    for(let i = 0; i < nativeFiles.count(); i++) {
+      const file = String(nativeFiles[i]).split('\\').pop();
+      files.push(file);
+    }
+    return files;
   }
 }
 
@@ -30054,10 +30060,15 @@ class FilePickerButton extends View {
     const picker = this._filePicker;
     picker.show();
     if(picker.choseFiles()) {
-      const files = picker.files();
-      this._button.setTitle('Replace file');
-      this._onFileSelected(files);
+      this.setFiles(picker.files());
     }
+  }
+
+  setFiles(files) {
+    this._button.setTitle('Replace file');
+    this._button.setHighlighted(false);
+
+    this._onFileSelected(files);
   }
 
   setLabel(label) {
@@ -30570,9 +30581,10 @@ var DEFAULT_SETTINGS = {
   applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
   addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
-  firstRowForSuffix: true
+  firstRowForSuffix: true,
+  filenames: []
 };
-var SETTING_KEY = "com.opale.translate.settings";
+var SETTING_KEY = 'com.opale.translate.settings';
 
 var Setting = function () {
   function Setting(api) {
@@ -30688,6 +30700,28 @@ var TextReplacer = function () {
 
       window.setMessageText('Opale Translate');
       window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
+      window.addButtonWithTitle('Replace text');
+      window.addButtonWithTitle('Cancel');
+
+      var btns = window.buttons();
+      var replaceBtn = btns[0];
+      var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
+          return replacer._translateTexts();
+        } });
+      var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
+      replaceBtn.setTarget(replaceDelegator);
+      replaceBtn.setAction('callback');
+      replaceBtn.setEnabled(false);
+      replaceBtn.setHighlighted(true);
+
+      var CancelButtonDelegator = new Delegator({ callback: function callback() {
+          return window.close();
+        } });
+      var cancelDelegator = CancelButtonDelegator.getClassInstance();
+      var cancelBtn = btns[1];
+      cancelBtn.setTarget(cancelDelegator);
+      cancelBtn.setAction('callback');
+      cancelBtn.setHighlighted(false);
 
       var fileSelectButton = new FilePickerButton('Select a spreadsheet');
       fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
@@ -30697,18 +30731,19 @@ var TextReplacer = function () {
         if (files.length < 1) {
           return result;
         }
-        var filename = String(files[0]).split('\\').pop().split('/').pop();
+        settings.set('filenames', files);
+        var filename = files[0].split('/').pop();
         fileSelectButton.setLabel('Spreadsheet: ' + filename);
-        for (var i = 0; i < files.length; i++) {
-          var fullpath = files[i];
-
-          var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-          var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
-          result[_filename] = content;
-          replacer.content = result;
-        }
+        var fullpath = files[0];
+        var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+        result[filename] = content;
+        replacer.content = { default: content };
         replaceBtn.setEnabled(true);
       });
+      var filenames = settings.get('filenames');
+      if (filenames.length != 0) {
+        fileSelectButton.setFiles(filenames);
+      }
 
       window.addAccessoryView(fileSelectButton.nativeView);
 
@@ -30741,7 +30776,7 @@ var TextReplacer = function () {
       var applyToRow = new Row(applyToLabel, applyToDropdown);
 
       var artboardPositionLabel = new TextField('New artboards to the:', TextField.TEXT_ALIGNMENT.RIGHT);
-      var artboardPositionDropdown = new DropdownButton().addItems(['Right', "Bottom"]).setSelectedAt(this.settings.get('addNewArtboardTo')).onSelectionChanged(function (idx) {
+      var artboardPositionDropdown = new DropdownButton().addItems(['Right', 'Bottom']).setSelectedAt(this.settings.get('addNewArtboardTo')).onSelectionChanged(function (idx) {
         settings.set('addNewArtboardTo', idx);
       });
       var artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
@@ -30762,29 +30797,6 @@ var TextReplacer = function () {
       caseRow.alignWith(applyToRow);
 
       window.addAccessoryView(dropdownsView.nativeView);
-
-      window.addButtonWithTitle('Replace text');
-      window.addButtonWithTitle('Cancel');
-
-      var btns = window.buttons();
-      var replaceBtn = btns[0];
-      var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
-          return replacer._translateTexts();
-        } });
-      var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
-      replaceBtn.setTarget(replaceDelegator);
-      replaceBtn.setAction('callback');
-      replaceBtn.setEnabled(false);
-      replaceBtn.setHighlighted(true);
-
-      var CancelButtonDelegator = new Delegator({ callback: function callback() {
-          return window.close();
-        } });
-      var cancelDelegator = CancelButtonDelegator.getClassInstance();
-      var cancelBtn = btns[1];
-      cancelBtn.setTarget(cancelDelegator);
-      cancelBtn.setAction('callback');
-      cancelBtn.setHighlighted(false);
 
       var btn = new Button('test');
       btns.push(btn);

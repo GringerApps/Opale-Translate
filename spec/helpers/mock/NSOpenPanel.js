@@ -7,7 +7,7 @@ NSOpenPanel = class NSOpenPanel extends NSObject {
 
   constructor() {
     super();
-    this._filenames = [];
+    this._filenames = NSArray.alloc().init();
     this._result = NSFileHandlingPanelCancelButton;
     this._open = false;
     this._canChooseFiles = null;
