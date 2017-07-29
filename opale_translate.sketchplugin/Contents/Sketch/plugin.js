@@ -27,6 +27,10 @@ const OPTIONS = {
   CASE_MATCHING: {
     SENSITIVE: 0,
     INSENSITIVE: 1
+  },
+  CASE_REPLACEMENT: {
+    NONE: 0,
+    SMART: 1
   }
 };
 
@@ -67,6 +71,7 @@ const DEFAULT_SETTINGS = {
   applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
   addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
+  caseReplacement: OPTIONS.CASE_REPLACEMENT.NONE,
   firstRowForSuffix: true,
   filenames: []
 };
@@ -95,6 +100,47 @@ class Setting {
     } catch(_) {
       return {};
     }
+  }
+}
+
+class CaseReplacer {
+  constructor(input) {
+    this.input = input;
+  }
+
+  apply(str) {
+    if(this._isLowerCase()) {
+      return str.toLowerCase();
+    }
+    if(this._isUpperCase()) {
+      return str.toUpperCase();
+    }
+    if(this._isTitleCase()) {
+      return str.split(' ').map((s) => s.substring(0, 1).toUpperCase() + s.substring(1)).join(' ');
+    }
+    if(this._isSentenceCase()) {
+      return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
+    }
+    return str;
+  }
+
+  _isUpperCase() {
+    return this.input == this.input.toUpperCase();
+  }
+
+  _isLowerCase() {
+    return this.input == this.input.toLowerCase();
+  }
+
+  _isSentenceCase() {
+    const firstChar = this.input.substring(0, 1);
+    const restOfSentence = this.input.substring(1);
+    return firstChar == firstChar.toUpperCase() && restOfSentence == restOfSentence.toLowerCase();
+  }
+
+  _isTitleCase() {
+    const words = this.input.split(' ');
+    return words.length > 1 && words.every((str) => str.length == 0 || str[0] == str[0].toUpperCase());
   }
 }
 
@@ -128,9 +174,9 @@ class TextReplacer {
           const iterator = new Iterator([duplicatedLayer]);
           const texts = iterator.filter((layer) => layer.isText, true);
           const isCaseSensitive = this.settings.get('caseMatching') == OPTIONS.CASE_MATCHING.SENSITIVE;
-          if(isCaseSensitive) {
+          if(!isCaseSensitive) {
             Object.keys(translations).map(function(key) {
-              translations[key] = translations[key].toLowerCase();
+              translations[key.toLowerCase()] = translations[key];
             });
           }
           texts.forEach((layer) => {
@@ -138,7 +184,12 @@ class TextReplacer {
             const matchingText = isCaseSensitive ? text : text.toLowerCase();
             if(translations.hasOwnProperty(matchingText)) {
               const translation = translations[matchingText];
-              layer.text = translation;
+              if(this.settings.get('caseReplacement') == OPTIONS.CASE_REPLACEMENT.SMART) {
+                const replacer = new CaseReplacer(text);
+                layer.text = replacer.apply(translation);
+              } else {
+                layer.text = translation;
+              }
             }
           });
         });
@@ -193,10 +244,6 @@ class TextReplacer {
       replacer.content = { default: content };
       replaceBtn.setEnabled(true);
     });
-    const filenames = settings.get('filenames');
-    if(filenames.length != 0){
-      fileSelectButton.setFiles(filenames);
-    }
 
     window.addAccessoryView(fileSelectButton.nativeView);
 
@@ -243,19 +290,38 @@ class TextReplacer {
       .onSelectionChanged((idx) => { settings.set('caseMatching', idx); });
     const caseRow = new Row(caseLabel, caseDropdown);
 
+    const caseReplacementLabel = new TextField('Case replacement:', TextField.TEXT_ALIGNMENT.RIGHT);
+    const caseReplacementDropdown = new DropdownButton()
+      .addItems(['Standard', 'Smart'])
+      .setSelectedAt(this.settings.get('caseReplacement'))
+      .onSelectionChanged((idx) => { settings.set('caseReplacement', idx); });
+    const caseReplacementRow = new Row(caseReplacementLabel, caseReplacementDropdown);
+
     const dropdownsView = new View();
-    dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
+    dropdownsView.setFrame(NSMakeRect(0, 0, 480, 100));
     dropdownsView.addSubview(applyToRow);
     dropdownsView.addSubview(artboardRow);
     dropdownsView.addSubview(caseRow);
-    dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]|', { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
+    dropdownsView.addSubview(caseReplacementRow);
+    dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]-[caseReplacement]|', {
+      applyTo: applyToRow,
+      artboards: artboardRow,
+      case: caseRow,
+      caseReplacement: caseReplacementRow
+    });
     artboardRow.alignWith(applyToRow);
     caseRow.alignWith(applyToRow);
+    caseReplacementRow.alignWith(applyToRow);
 
     window.addAccessoryView(dropdownsView.nativeView);
 
     const btn = new Button('test');
     btns.push(btn);
+
+    const filenames = settings.get('filenames');
+    if(filenames.length != 0){
+      fileSelectButton.setFiles(filenames);
+    }
   }
 
   _verifySelection() {
