@@ -73,7 +73,7 @@ const DEFAULT_SETTINGS = {
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
   caseReplacement: OPTIONS.CASE_REPLACEMENT.NONE,
   firstRowForSuffix: true,
-  filenames: []
+  filename: null
 };
 const SETTING_KEY = 'com.opale.translate.settings';
 class Setting {
@@ -83,7 +83,11 @@ class Setting {
   }
 
   get(key) {
-    return this.state[key];
+    const value = this.state[key];
+    if (value === undefined) {
+      return null;
+    }
+    return value;
   }
 
   set(key, value) {
@@ -148,6 +152,7 @@ class TextReplacer {
   constructor(context) {
     this.context = context;
     this.settings = new Setting(context.api());
+    this.parser = new ExcelParser(this.settings.get('firstRowForSuffix'));
     this.content = {};
     this.window = new Window();
   }
@@ -159,8 +164,7 @@ class TextReplacer {
       const selection = new Iterator(selectedLayers);
       const artboards = selection.filter((layer) => layer.isArtboard, this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE);
       const mover = new LayerMover(artboards);
-      const parser = new ExcelParser(this.settings.get('firstRowForSuffix'));
-      const translatedContent = parser.parse(this.content);
+      const translatedContent = this.parser.parse();
       for (const key in translatedContent) {
         artboards.forEach((layer) => {
           const translations = JSON.parse(JSON.stringify(translatedContent[key]));
@@ -228,21 +232,24 @@ class TextReplacer {
     cancelBtn.setHighlighted(false);
 
     const fileSelectButton = new FilePickerButton('Select a spreadsheet');
-    fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+    fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 25));
     fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
     fileSelectButton.onFileSelected((files) => {
-      const result = {};
       if (files.length < 1) {
-        return result;
+        return;
       }
-      settings.set('filenames', files);
-      const filename = files[0].split('/').pop();
-      fileSelectButton.setLabel('Spreadsheet: ' + filename);
       const fullpath = files[0];
       const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-      result[filename] = content;
-      replacer.content = { default: content };
-      replaceBtn.setEnabled(true);
+      const filename = fullpath.split('/').pop();
+      try {
+        this.parser.setContent(content);
+        fileSelectButton.setLabel('Spreadsheet: ' + filename);
+        replaceBtn.setEnabled(true);
+        settings.set('filename', fullpath);
+      } catch(e) {
+        replaceBtn.setEnabled(false);
+        fileSelectButton.setFiles([]);
+      }
     });
 
     window.addAccessoryView(fileSelectButton.nativeView);
@@ -298,12 +305,12 @@ class TextReplacer {
     const caseReplacementRow = new Row(caseReplacementLabel, caseReplacementDropdown);
 
     const dropdownsView = new View();
-    dropdownsView.setFrame(NSMakeRect(0, 0, 480, 100));
+    dropdownsView.setFrame(NSMakeRect(0, 0, 480, 130));
     dropdownsView.addSubview(applyToRow);
     dropdownsView.addSubview(artboardRow);
     dropdownsView.addSubview(caseRow);
     dropdownsView.addSubview(caseReplacementRow);
-    dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]-[caseReplacement]|', {
+    dropdownsView.addVisualConstraint('V:|-[applyTo]-5-[artboards]-5-[case]-5-[caseReplacement]|', {
       applyTo: applyToRow,
       artboards: artboardRow,
       case: caseRow,
@@ -318,9 +325,12 @@ class TextReplacer {
     const btn = new Button('test');
     btns.push(btn);
 
-    const filenames = settings.get('filenames');
-    if(filenames.length != 0){
-      fileSelectButton.setFiles(filenames);
+    const filename = settings.get('filename');
+    if(filename !== null){
+      const fileManager = NSFileManager.defaultManager();
+      if(fileManager.fileExistsAtPath(filename)) {
+        fileSelectButton.setFiles([filename]);
+      }
     }
   }
 

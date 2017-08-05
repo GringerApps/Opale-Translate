@@ -4,6 +4,7 @@ const Button = require('./Button');
 const TextField = require('./TextField');
 
 const DEFAULT_BUTTON_TITLE = 'Select file';
+const REPLACE_BUTTON_TITLE = 'Replace file';
 
 class FilePickerButton extends View {
   constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
@@ -14,6 +15,7 @@ class FilePickerButton extends View {
     this._button.onClick(() => self._onClick());
     this._button.setHighlighted(true);
 
+    this._labelText = labelText;
     this._label = new TextField(labelText);
 
     this._filePicker = new FilePicker();
@@ -41,7 +43,13 @@ class FilePickerButton extends View {
   }
 
   setFiles(files) {
-    this._button.setTitle('Replace file');
+    if(files.length === 0) {
+      this.setLabel(this._labelText);
+      this._button.setTitle(DEFAULT_BUTTON_TITLE);
+      this._button.setHighlighted(true);
+      return;
+    }
+    this._button.setTitle(REPLACE_BUTTON_TITLE);
     this._button.setHighlighted(false);
 
     this._onFileSelected(files);

@@ -30028,6 +30028,7 @@ const Button = require('./Button');
 const TextField = require('./TextField');
 
 const DEFAULT_BUTTON_TITLE = 'Select file';
+const REPLACE_BUTTON_TITLE = 'Replace file';
 
 class FilePickerButton extends View {
   constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
@@ -30038,6 +30039,7 @@ class FilePickerButton extends View {
     this._button.onClick(() => self._onClick());
     this._button.setHighlighted(true);
 
+    this._labelText = labelText;
     this._label = new TextField(labelText);
 
     this._filePicker = new FilePicker();
@@ -30065,7 +30067,13 @@ class FilePickerButton extends View {
   }
 
   setFiles(files) {
-    this._button.setTitle('Replace file');
+    if(files.length === 0) {
+      this.setLabel(this._labelText);
+      this._button.setTitle(DEFAULT_BUTTON_TITLE);
+      this._button.setHighlighted(true);
+      return;
+    }
+    this._button.setTitle(REPLACE_BUTTON_TITLE);
     this._button.setHighlighted(false);
 
     this._onFileSelected(files);
@@ -30199,56 +30207,44 @@ module.exports = Iterator;
 },{}],18:[function(require,module,exports){
 const XLSX = require('xlsx');
 
-class I18nGoParser {
-  get encoding() {
-    return NSUTF8StringEncoding;
-  }
-
-  parse(content) {
-    const result = {};
-    for (let key in content) {
-      const translations = JSON.parse(content[key]);
-      const mappedTranslations = {};
-      for (let i = 0; i < translations.length; i++) {
-        const translation = translations[i];
-        mappedTranslations[translation.id] = translation.translation;
-      }
-      result[key] = mappedTranslations;
-    }
-    return result;
-  }
-}
-
 class ExcelParser {
   constructor(parseHeader = true) {
     this._parserHeader = parseHeader;
+    this._content = null;
   }
 
   get encoding() {
     return NSISOLatin1StringEncoding;
   }
 
-  parse(content) {
+  setParseHeader(parseHeader) {
+    this._parserHeader = parseHeader;
+  }
+
+  setContent(content) {
+    this._content = XLSX.read(String(content), { type: 'binary' });
+  }
+
+  parse() {
     const result = {};
-    for (let key in content) {
-      const fileContent = String(content[key]);
-      const workbook = XLSX.read(fileContent, { type: 'binary' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
-      for (let i = 1; i < headers.length; i++) {
-        const language = headers[i];
-        result[language] = {};
-      }
-      for (let i = 0; i < translations.length; i++) {
-        const mapping = translations[i];
-        for (let j = 1; j < mapping.length; j++) {
-          const language = headers[j];
-          const key = mapping[0];
-          const translation = mapping[j];
-          result[language][key] = translation;
-        }
+    if (this._content === null) {
+      return result;
+    }
+    const sheetName = this._content.SheetNames[0];
+    const sheet = this._content.Sheets[sheetName];
+    const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
+    for (let i = 1; i < headers.length; i++) {
+      const language = headers[i];
+      result[language] = {};
+    }
+    for (let i = 0; i < translations.length; i++) {
+      const mapping = translations[i];
+      for (let j = 1; j < mapping.length; j++) {
+        const language = headers[j];
+        const key = mapping[0];
+        const translation = mapping[j];
+        result[language][key] = translation;
       }
     }
     return result;
@@ -30256,7 +30252,6 @@ class ExcelParser {
 }
 
 module.exports = {
-  I18nGoParser,
   ExcelParser
 };
 
@@ -30587,7 +30582,7 @@ var DEFAULT_SETTINGS = {
   caseMatching: OPTIONS.CASE_MATCHING.SENSITIVE,
   caseReplacement: OPTIONS.CASE_REPLACEMENT.NONE,
   firstRowForSuffix: true,
-  filenames: []
+  filename: null
 };
 var SETTING_KEY = 'com.opale.translate.settings';
 
@@ -30602,7 +30597,11 @@ var Setting = function () {
   _createClass(Setting, [{
     key: 'get',
     value: function get(key) {
-      return this.state[key];
+      var value = this.state[key];
+      if (value === undefined) {
+        return null;
+      }
+      return value;
     }
   }, {
     key: 'set',
@@ -30690,6 +30689,7 @@ var TextReplacer = function () {
 
     this.context = context;
     this.settings = new Setting(context.api());
+    this.parser = new ExcelParser(this.settings.get('firstRowForSuffix'));
     this.content = {};
     this.window = new Window();
   }
@@ -30708,8 +30708,7 @@ var TextReplacer = function () {
             return layer.isArtboard;
           }, _this.settings.get('applyTo') === OPTIONS.APPLY_TO.CURRENT_PAGE);
           var mover = new LayerMover(artboards);
-          var parser = new ExcelParser(_this.settings.get('firstRowForSuffix'));
-          var translatedContent = parser.parse(_this.content);
+          var translatedContent = _this.parser.parse();
 
           var _loop = function _loop(key) {
             artboards.forEach(function (layer) {
@@ -30759,6 +30758,8 @@ var TextReplacer = function () {
   }, {
     key: '_buildView',
     value: function _buildView() {
+      var _this2 = this;
+
       var replacer = this;
       var context = this.context;
       var window = this.window;
@@ -30790,21 +30791,24 @@ var TextReplacer = function () {
       cancelBtn.setHighlighted(false);
 
       var fileSelectButton = new FilePickerButton('Select a spreadsheet');
-      fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+      fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 25));
       fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
       fileSelectButton.onFileSelected(function (files) {
-        var result = {};
         if (files.length < 1) {
-          return result;
+          return;
         }
-        settings.set('filenames', files);
-        var filename = files[0].split('/').pop();
-        fileSelectButton.setLabel('Spreadsheet: ' + filename);
         var fullpath = files[0];
         var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-        result[filename] = content;
-        replacer.content = { default: content };
-        replaceBtn.setEnabled(true);
+        var filename = fullpath.split('/').pop();
+        try {
+          _this2.parser.setContent(content);
+          fileSelectButton.setLabel('Spreadsheet: ' + filename);
+          replaceBtn.setEnabled(true);
+          settings.set('filename', fullpath);
+        } catch (e) {
+          replaceBtn.setEnabled(false);
+          fileSelectButton.setFiles([]);
+        }
       });
 
       window.addAccessoryView(fileSelectButton.nativeView);
@@ -30856,12 +30860,12 @@ var TextReplacer = function () {
       var caseReplacementRow = new Row(caseReplacementLabel, caseReplacementDropdown);
 
       var dropdownsView = new View();
-      dropdownsView.setFrame(NSMakeRect(0, 0, 480, 100));
+      dropdownsView.setFrame(NSMakeRect(0, 0, 480, 130));
       dropdownsView.addSubview(applyToRow);
       dropdownsView.addSubview(artboardRow);
       dropdownsView.addSubview(caseRow);
       dropdownsView.addSubview(caseReplacementRow);
-      dropdownsView.addVisualConstraint('V:|-[applyTo]-[artboards]-[case]-[caseReplacement]|', {
+      dropdownsView.addVisualConstraint('V:|-[applyTo]-5-[artboards]-5-[case]-5-[caseReplacement]|', {
         applyTo: applyToRow,
         artboards: artboardRow,
         case: caseRow,
@@ -30876,9 +30880,12 @@ var TextReplacer = function () {
       var btn = new Button('test');
       btns.push(btn);
 
-      var filenames = settings.get('filenames');
-      if (filenames.length != 0) {
-        fileSelectButton.setFiles(filenames);
+      var filename = settings.get('filename');
+      if (filename !== null) {
+        var fileManager = NSFileManager.defaultManager();
+        if (fileManager.fileExistsAtPath(filename)) {
+          fileSelectButton.setFiles([filename]);
+        }
       }
     }
   }, {
