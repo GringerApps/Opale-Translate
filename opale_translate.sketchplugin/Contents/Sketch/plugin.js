@@ -305,7 +305,7 @@ class TextReplacer {
     const caseReplacementRow = new Row(caseReplacementLabel, caseReplacementDropdown);
 
     const dropdownsView = new View();
-    dropdownsView.setFrame(NSMakeRect(0, 0, 480, 130));
+    dropdownsView.setFrame(NSMakeRect(0, 0, 480, 100));
     dropdownsView.addSubview(applyToRow);
     dropdownsView.addSubview(artboardRow);
     dropdownsView.addSubview(caseRow);

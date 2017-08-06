@@ -9,8 +9,11 @@ NSRadioButton = 10;
 NSRadioModeMatrix = 3;
 
 NSLayoutAttributeWidth = 0;
+NSLayoutAttributeHeight = 1;
+NSLayoutAttributeCenterY = 5;
 
 NSLayoutRelationEqual = 0;
+NSLayoutRelationGreaterThanOrEqual = 2;
 
 NSMomentaryLightButton = 0;
 

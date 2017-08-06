@@ -30266,8 +30266,10 @@ class Row extends View {
     this.nativeView.addSubview(left.nativeView);
     this.nativeView.addSubview(right.nativeView);
     this.addVisualConstraint('H:|-0-[left]-[right]->=0-|', { left: left, right: right });
-    this.addVisualConstraint('V:|-0-[left]-0-|', { left: left });
-    this.addVisualConstraint('V:|-0-[right]-0-|', { right: right });
+    this.addVisualConstraint('V:|->=0-[left]->=0-|', { left: left });
+    this.addVisualConstraint('V:|->=0-[right]->=0-|', { right: right });
+    right.addConstraint({ to: left, attr: NSLayoutAttributeCenterY, relatedBy: NSLayoutRelationEqual, constant: 1 });
+    right.addConstraint({ to: null, attr: NSLayoutAttributeHeight, relatedBy: NSLayoutRelationGreaterThanOrEqual, constant: 24 });
   }
 
   alignWith(row) {
@@ -30374,7 +30376,7 @@ class View {
     opts = Object.assign({ multiplier: 1, constant: 0, relatedBy: NSLayoutRelationEqual }, opts);
     const { to, attr, relatedBy, multiplier, constant } = opts;
     NSLayoutConstraint.constraintWithItem_attribute_relatedBy_toItem_attribute_multiplier_constant(
-      this.nativeView, attr, relatedBy, to.nativeView, attr, multiplier, constant
+      this.nativeView, attr, relatedBy, to && to.nativeView, attr, multiplier, constant
     ).setActive(true);
   }
 
@@ -30860,7 +30862,7 @@ var TextReplacer = function () {
       var caseReplacementRow = new Row(caseReplacementLabel, caseReplacementDropdown);
 
       var dropdownsView = new View();
-      dropdownsView.setFrame(NSMakeRect(0, 0, 480, 130));
+      dropdownsView.setFrame(NSMakeRect(0, 0, 480, 100));
       dropdownsView.addSubview(applyToRow);
       dropdownsView.addSubview(artboardRow);
       dropdownsView.addSubview(caseRow);

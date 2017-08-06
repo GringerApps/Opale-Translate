@@ -38,7 +38,7 @@ class View {
     opts = Object.assign({ multiplier: 1, constant: 0, relatedBy: NSLayoutRelationEqual }, opts);
     const { to, attr, relatedBy, multiplier, constant } = opts;
     NSLayoutConstraint.constraintWithItem_attribute_relatedBy_toItem_attribute_multiplier_constant(
-      this.nativeView, attr, relatedBy, to.nativeView, attr, multiplier, constant
+      this.nativeView, attr, relatedBy, to && to.nativeView, attr, multiplier, constant
     ).setActive(true);
   }
 
