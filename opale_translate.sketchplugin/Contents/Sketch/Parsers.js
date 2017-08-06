@@ -3,7 +3,7 @@ const XLSX = require('xlsx');
 class ExcelParser {
   constructor(parseHeader = true) {
     this._parserHeader = parseHeader;
-    this._content = null;
+    this._translations = null;
   }
 
   get encoding() {
@@ -15,24 +15,24 @@ class ExcelParser {
   }
 
   setContent(content) {
-    this._content = XLSX.read(String(content), { type: 'binary' });
+    const xlsx = XLSX.read(String(content), { type: 'binary' });
+    const sheetName = xlsx.SheetNames[0];
+    const sheet = xlsx.Sheets[sheetName];
+    this._translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   }
 
   parse() {
     const result = {};
-    if (this._content === null) {
+    if (this._translations === null) {
       return result;
     }
-    const sheetName = this._content.SheetNames[0];
-    const sheet = this._content.Sheets[sheetName];
-    const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
+    const headers = this._parserHeader ? this._translations.shift() : this._translations[0].map((_, i) => i.toString());
     for (let i = 1; i < headers.length; i++) {
       const language = headers[i];
       result[language] = {};
     }
-    for (let i = 0; i < translations.length; i++) {
-      const mapping = translations[i];
+    for (let i = 0; i < this._translations.length; i++) {
+      const mapping = this._translations[i];
       for (let j = 1; j < mapping.length; j++) {
         const language = headers[j];
         const key = mapping[0];

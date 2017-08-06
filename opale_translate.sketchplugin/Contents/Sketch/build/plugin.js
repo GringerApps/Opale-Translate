@@ -29821,6 +29821,51 @@ class AlertWindow {
 module.exports = AlertWindow;
 
 },{}],10:[function(require,module,exports){
+const View = require("./View");
+const ImageView = require("./ImageView");
+const TextField = require("./TextField");
+
+class Box extends View {
+  constructor(context) {
+    const box = NSBox.alloc().init();
+    super(box);
+    box.setFillColor(NSColor.colorWithRed_green_blue_alpha(1, 0.92, 0.68, 1.0));
+    box.setBorderColor(NSColor.colorWithRed_green_blue_alpha(0.89, 0.69, 0.18, 1.0));
+    box.setBorderType(NSBezelBorder);
+    box.setBorderWidth(1);
+    box.setCornerRadius(5);
+    box.setBoxType(NSBoxCustom);
+    box.setTitlePosition(NSNoTitle);
+
+    const view = new View();
+    box.setContentView(view.nativeView);
+
+    const warningImage = new ImageView(context);
+    warningImage.setImageFromResource("alert_icn.png");
+    view.addSubview(warningImage);
+
+    this._textField = new TextField("");
+    view.addSubview(this._textField);
+
+    this._textField.addConstraint({ to: warningImage, attr: NSLayoutAttributeHeight, relatedBy: NSLayoutRelationEqual });
+    view.addVisualConstraint("H:|-0-[img]-(-8)-[tf]->=0-|", { img: warningImage, tf: this._textField });
+    view.addVisualConstraint("V:|->=0-[tf]->=0-|", { img: warningImage, tf: this._textField });
+    view.addVisualConstraint("V:|->=0-[img]->=0-|", { img: warningImage, tf: this._textField });
+  }
+
+  setHidden(hidden) {
+    this.nativeView.setHidden(hidden);
+  }
+
+  setText(text) {
+    this._textField.setText(text);
+  }
+}
+
+module.exports = Box;
+
+
+},{"./ImageView":17,"./TextField":21,"./View":22}],11:[function(require,module,exports){
 const View = require('./View');
 const Delegator = require('./Delegator');
 
@@ -29856,7 +29901,7 @@ class Button extends View {
 
 module.exports = Button;
 
-},{"./Delegator":12,"./View":21}],11:[function(require,module,exports){
+},{"./Delegator":13,"./View":22}],12:[function(require,module,exports){
 const View = require('./View');
 const Delegator = require('./Delegator');
 
@@ -29891,7 +29936,7 @@ class Checkbox extends View {
 }
 module.exports = Checkbox;
 
-},{"./Delegator":12,"./View":21}],12:[function(require,module,exports){
+},{"./Delegator":13,"./View":22}],13:[function(require,module,exports){
 class Delegator {
   constructor(selectorHandlerDict, superclass) {
     this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
@@ -29933,7 +29978,7 @@ class Delegator {
 
 module.exports = Delegator;
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 const Delegator = require('./Delegator');
 const View = require('./View');
 
@@ -29986,7 +30031,7 @@ class DropdownButton extends View {
 
 module.exports = DropdownButton;
 
-},{"./Delegator":12,"./View":21}],14:[function(require,module,exports){
+},{"./Delegator":13,"./View":22}],15:[function(require,module,exports){
 class FilePicker {
   constructor() {
     const panel = NSOpenPanel.openPanel();
@@ -30021,7 +30066,7 @@ class FilePicker {
 
 module.exports = FilePicker;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 const FilePicker = require('./FilePicker');
 const View = require('./View');
 const Button = require('./Button');
@@ -30090,7 +30135,7 @@ class FilePickerButton extends View {
 
 module.exports = FilePickerButton;
 
-},{"./Button":10,"./FilePicker":14,"./TextField":20,"./View":21}],16:[function(require,module,exports){
+},{"./Button":11,"./FilePicker":15,"./TextField":21,"./View":22}],17:[function(require,module,exports){
 const View = require('./View');
 
 class ImageView extends View {
@@ -30117,7 +30162,7 @@ class ImageView extends View {
 
 module.exports = ImageView;
 
-},{"./View":21}],17:[function(require,module,exports){
+},{"./View":22}],18:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -30204,13 +30249,13 @@ class Iterator {
 
 module.exports = Iterator;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 const XLSX = require('xlsx');
 
 class ExcelParser {
   constructor(parseHeader = true) {
     this._parserHeader = parseHeader;
-    this._content = null;
+    this._translations = null;
   }
 
   get encoding() {
@@ -30222,24 +30267,24 @@ class ExcelParser {
   }
 
   setContent(content) {
-    this._content = XLSX.read(String(content), { type: 'binary' });
+    const xlsx = XLSX.read(String(content), { type: 'binary' });
+    const sheetName = xlsx.SheetNames[0];
+    const sheet = xlsx.Sheets[sheetName];
+    this._translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   }
 
   parse() {
     const result = {};
-    if (this._content === null) {
+    if (this._translations === null) {
       return result;
     }
-    const sheetName = this._content.SheetNames[0];
-    const sheet = this._content.Sheets[sheetName];
-    const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const headers = this._parserHeader ? translations.shift() : translations[0].map((_, i) => i.toString());
+    const headers = this._parserHeader ? this._translations.shift() : this._translations[0].map((_, i) => i.toString());
     for (let i = 1; i < headers.length; i++) {
       const language = headers[i];
       result[language] = {};
     }
-    for (let i = 0; i < translations.length; i++) {
-      const mapping = translations[i];
+    for (let i = 0; i < this._translations.length; i++) {
+      const mapping = this._translations[i];
       for (let j = 1; j < mapping.length; j++) {
         const language = headers[j];
         const key = mapping[0];
@@ -30255,7 +30300,7 @@ module.exports = {
   ExcelParser
 };
 
-},{"xlsx":8}],19:[function(require,module,exports){
+},{"xlsx":8}],20:[function(require,module,exports){
 const View = require('./View');
 
 class Row extends View {
@@ -30280,7 +30325,7 @@ class Row extends View {
 
 module.exports = Row;
 
-},{"./View":21}],20:[function(require,module,exports){
+},{"./View":22}],21:[function(require,module,exports){
 const View = require('./View');
 
 class TextField extends View {
@@ -30335,7 +30380,7 @@ class TextField extends View {
 
 module.exports = TextField;
 
-},{"./View":21}],21:[function(require,module,exports){
+},{"./View":22}],22:[function(require,module,exports){
 class View {
   static get LAYOUT_TYPE() {
     return {
@@ -30388,7 +30433,7 @@ class View {
 
 module.exports = View;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 class Window {
   constructor() {
     const x = 0, y = 0, w = 500, h = 300;
@@ -30468,7 +30513,7 @@ class Window {
 
 module.exports = Window;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 module.exports = {
   TITLE: 'Opale Translate',
   MESSAGES: {
@@ -30478,7 +30523,7 @@ module.exports = {
   SCALE_FACTOR: 0.5
 };
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -30504,6 +30549,7 @@ var Row = require('./Row');
 var ImageView = require('./ImageView');
 var Checkbox = require('./Checkbox');
 var Button = require('./Button');
+var Box = require('./Box');
 
 var ALERT = new AlertWindow(TITLE);
 
@@ -30800,20 +30846,44 @@ var TextReplacer = function () {
           return;
         }
         var fullpath = files[0];
+        if (!fullpath.endsWith(".xls") && !fullpath.endsWith(".xlsx") && !fullpath.endsWith(".ods")) {
+          replaceBtn.setEnabled(false);
+          fileSelectButton.setFiles([]);
+          box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+          box.setHidden(false);
+          return;
+        }
         var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+        if (content === null) {
+          replaceBtn.setEnabled(false);
+          fileSelectButton.setFiles([]);
+          return;
+        }
         var filename = fullpath.split('/').pop();
+        if (filename.length > 30) {
+          filename = filename.substring(0, 10) + "..." + filename.substring(filename.length - 10);
+        }
         try {
           _this2.parser.setContent(content);
           fileSelectButton.setLabel('Spreadsheet: ' + filename);
           replaceBtn.setEnabled(true);
           settings.set('filename', fullpath);
+          box.setText("");
+          box.setHidden(true);
         } catch (e) {
           replaceBtn.setEnabled(false);
           fileSelectButton.setFiles([]);
+          box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+          box.setHidden(false);
         }
       });
 
       window.addAccessoryView(fileSelectButton.nativeView);
+
+      var box = new Box(context);
+      box.setFrame(NSMakeRect(0, 0, 480, 26));
+      box.setHidden(true);
+      window.addAccessoryView(box.nativeView);
 
       var preview = new View();
       preview.setFrame(NSMakeRect(0, 0, 480, 180));
@@ -30928,4 +30998,4 @@ var TextReplacer = function () {
 
   return TextReplacer;
 }();
-},{"./AlertWindow":9,"./Button":10,"./Checkbox":11,"./Delegator":12,"./DropdownButton":13,"./FilePickerButton":15,"./ImageView":16,"./Iterator":17,"./Parsers":18,"./Row":19,"./TextField":20,"./View":21,"./Window":22,"./consts":23}]},{},[24])
+},{"./AlertWindow":9,"./Box":10,"./Button":11,"./Checkbox":12,"./Delegator":13,"./DropdownButton":14,"./FilePickerButton":16,"./ImageView":17,"./Iterator":18,"./Parsers":19,"./Row":20,"./TextField":21,"./View":22,"./Window":23,"./consts":24}]},{},[25])

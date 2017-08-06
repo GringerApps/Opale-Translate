@@ -12,6 +12,7 @@ const Row = require('./Row');
 const ImageView = require('./ImageView');
 const Checkbox = require('./Checkbox');
 const Button = require('./Button');
+const Box = require('./Box');
 
 const ALERT = new AlertWindow(TITLE);
 
@@ -239,20 +240,44 @@ class TextReplacer {
         return;
       }
       const fullpath = files[0];
+      if (!fullpath.endsWith(".xls") && !fullpath.endsWith(".xlsx") && !fullpath.endsWith(".ods")) {
+        replaceBtn.setEnabled(false);
+        fileSelectButton.setFiles([]);
+        box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+        box.setHidden(false);
+        return;
+      }
       const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
-      const filename = fullpath.split('/').pop();
+      if (content === null) {
+        replaceBtn.setEnabled(false);
+        fileSelectButton.setFiles([]);
+        return;
+      }
+      let filename = fullpath.split('/').pop();
+      if (filename.length > 30) {
+        filename = filename.substring(0, 10) + "..." + filename.substring(filename.length - 10);
+      }
       try {
         this.parser.setContent(content);
         fileSelectButton.setLabel('Spreadsheet: ' + filename);
         replaceBtn.setEnabled(true);
         settings.set('filename', fullpath);
+        box.setText("");
+        box.setHidden(true);
       } catch(e) {
         replaceBtn.setEnabled(false);
         fileSelectButton.setFiles([]);
+        box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+        box.setHidden(false);
       }
     });
 
     window.addAccessoryView(fileSelectButton.nativeView);
+
+    const box = new Box(context);
+    box.setFrame(NSMakeRect(0, 0, 480, 26));
+    box.setHidden(true);
+    window.addAccessoryView(box.nativeView);
 
     const preview = new View();
     preview.setFrame(NSMakeRect(0, 0, 480, 180));
