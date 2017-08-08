@@ -24,7 +24,7 @@ NSPopUpButton = class NSPopUpButton extends NSView {
     this._action = null;
     this._target = null;
     this._indexOfSelectedItem = 0;
-    this._titleOfSelectedItem = "";
+    this._titleOfSelectedItem = '';
   }
 
   initWithFrame_pullsDown(frame, pullsDown) {

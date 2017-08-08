@@ -1,4 +1,4 @@
-require("./NSObject");
+require('./NSObject');
 
 NSImage = class NSImage extends NSObject {
   constructor() {

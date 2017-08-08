@@ -1,6 +1,6 @@
-const View = require("./View");
-const ImageView = require("./ImageView");
-const TextField = require("./TextField");
+const View = require('./View');
+const ImageView = require('./ImageView');
+const TextField = require('./TextField');
 
 class Box extends View {
   constructor(context) {
@@ -18,16 +18,16 @@ class Box extends View {
     box.setContentView(view.nativeView);
 
     const warningImage = new ImageView(context);
-    warningImage.setImageFromResource("alert_icn.png");
+    warningImage.setImageFromResource('alert_icn.png');
     view.addSubview(warningImage);
 
-    this._textField = new TextField("");
+    this._textField = new TextField('');
     view.addSubview(this._textField);
 
     this._textField.addConstraint({ to: warningImage, attr: NSLayoutAttributeHeight, relatedBy: NSLayoutRelationEqual });
-    view.addVisualConstraint("H:|-0-[img]-(-8)-[tf]->=0-|", { img: warningImage, tf: this._textField });
-    view.addVisualConstraint("V:|->=0-[tf]->=0-|", { img: warningImage, tf: this._textField });
-    view.addVisualConstraint("V:|->=0-[img]->=0-|", { img: warningImage, tf: this._textField });
+    view.addVisualConstraint('H:|-0-[img]-(-8)-[tf]->=0-|', { img: warningImage, tf: this._textField });
+    view.addVisualConstraint('V:|->=0-[tf]->=0-|', { img: warningImage, tf: this._textField });
+    view.addVisualConstraint('V:|->=0-[img]->=0-|', { img: warningImage, tf: this._textField });
   }
 
   setHidden(hidden) {

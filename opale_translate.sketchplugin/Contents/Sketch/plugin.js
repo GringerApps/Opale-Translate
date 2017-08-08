@@ -240,10 +240,10 @@ class TextReplacer {
         return;
       }
       const fullpath = files[0];
-      if (!fullpath.endsWith(".xls") && !fullpath.endsWith(".xlsx") && !fullpath.endsWith(".ods")) {
+      if (!fullpath.endsWith('.xls') && !fullpath.endsWith('.xlsx') && !fullpath.endsWith('.ods')) {
         replaceBtn.setEnabled(false);
         fileSelectButton.setFiles([]);
-        box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+        box.setText('The selected file is not in a supported format (.xls, .xlsx or .ods).');
         box.setHidden(false);
         return;
       }
@@ -255,19 +255,19 @@ class TextReplacer {
       }
       let filename = fullpath.split('/').pop();
       if (filename.length > 30) {
-        filename = filename.substring(0, 10) + "..." + filename.substring(filename.length - 10);
+        filename = filename.substring(0, 10) + '...' + filename.substring(filename.length - 10);
       }
       try {
         this.parser.setContent(content);
         fileSelectButton.setLabel('Spreadsheet: ' + filename);
         replaceBtn.setEnabled(true);
         settings.set('filename', fullpath);
-        box.setText("");
+        box.setText('');
         box.setHidden(true);
       } catch(e) {
         replaceBtn.setEnabled(false);
         fileSelectButton.setFiles([]);
-        box.setText("The selected file is not in a supported format (.xls, .xlsx or .ods).");
+        box.setText('The selected file is not in a supported format (.xls, .xlsx or .ods).');
         box.setHidden(false);
       }
     });
