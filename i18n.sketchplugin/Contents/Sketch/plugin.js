@@ -1,16 +1,20 @@
-const Iterator = require("./Iterator");
-const { I18nGoParser, ExcelParser } = require("./Parsers");
-const AlertWindow = require("./AlertWindow");
-const FilePickerButton = require("./FilePickerButton")
-const Delegator = require("./Delegator");
-const Window = require("./Window");
-const DropdownButton = require("./DropdownButton");
-const { scaleFrame } = require("./viewhelper");
-const { TITLE, MESSAGES } = require("./consts");
+const Iterator = require('./Iterator');
+const { ExcelParser } = require('./Parsers');
+const AlertWindow = require('./AlertWindow');
+const FilePickerButton = require('./FilePickerButton');
+const Delegator = require('./Delegator');
+const Window = require('./Window');
+const { TITLE, MESSAGES } = require('./consts');
+const View = require('./View');
+// const TextField = require('./TextField');
+// const Row = require('./Row');
+// const ImageView = require('./ImageView');
+// const Checkbox = require('./Checkbox');
+const Button = require('./Button');
+
 const ALERT = new AlertWindow(TITLE);
 
-const verifySelection = (context) => {
-  const api = context.api();
+const verifySelection = (api) => {
   const selectedLayers = api.selectedDocument.selectedLayers;
   const selection = new Iterator(selectedLayers);
 
@@ -27,6 +31,34 @@ const verifySelection = (context) => {
   }
 
   return true;
+};
+
+const translateTexts = (api, state, window) => {
+  if(verifySelection(api)) {
+    const selectedLayers = api.selectedDocument.selectedLayers;
+    const selection = new Iterator(selectedLayers);
+    const artboards = selection.filter((layer) => layer.isArtboard);
+    const parser = new ExcelParser(state.firstRowForSuffix);
+    const translatedContent = parser.parse(state.content);
+    artboards.forEach((layer) => {
+      const frame = layer.frame;
+      for (const key in translatedContent) {
+        const translations = translatedContent[key];
+        const duplicatedLayer = layer.duplicate();
+        frame.offset(frame.width + 20, 0);
+        duplicatedLayer.frame = frame;
+        duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+        const iterator = new Iterator([duplicatedLayer]);
+        const texts = iterator.filter((layer) => layer.isText, true);
+        texts.forEach((layer) => {
+          const text = String(layer.text);
+          const translation = translations[text] || text;
+          layer.text = translation;
+        });
+      }
+    });
+    window.close();
+  }
 };
 
 const OPTIONS = {
@@ -49,10 +81,12 @@ const BTN_CLICKED = {
 const buildView = (context, state) => {
   const api = context.api();
   const window = new Window();
-  window.setMessageText("Opale");
-  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
+  window.setMessageText('Opale');
+  window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
 
-  const fileSelectButton = new FilePickerButton("Select a spreadsheet");
+  const fileSelectButton = new FilePickerButton('Select a spreadsheet');
+  fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+  fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
   fileSelectButton.onFileSelected((files) => {
     const result = {};
     if (files.length < 1) {
@@ -63,121 +97,86 @@ const buildView = (context, state) => {
     for (let i = 0; i < files.length; i++) {
       const fullpath = files[i];
 
-      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
-      const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
+      const content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+      const filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
       result[filename] = content;
       state.content = result;
     }
   });
 
-  fileSelectButton.addToWindow(window);
+  window.addAccessoryView(fileSelectButton.nativeView);
 
-  const preview = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 480, 180));
-  const gridUrl = api.resourceNamed("grid.png");
-  const gridSuffixUrl = api.resourceNamed("grid_suffix.png");
-  const gridImage = NSImage.alloc().initWithContentsOfURL(gridUrl);
-  const gridSuffixImage = NSImage.alloc().initWithContentsOfURL(gridSuffixUrl);
-  const imgView = NSImageView.alloc().init();
-  imgView.setImage(gridImage);
-  imgView.setImageAlignment(2);
-  imgView.setImageScaling(0);
-  imgView.setTranslatesAutoresizingMaskIntoConstraints(false);
+  // const preview = new View();
+  // preview.setFrame(NSMakeRect(0, 0, 480, 180));
 
-  const NSButtonDelegator = new Delegator({
-    callback: () => {
-      imgView.setImage(checkBox.state() == NSOnState ? gridSuffixImage : gridImage);
-      state.firstRowForSuffix = checkBox.state() == NSOnState;
-    }
-  });
-  const delegator = NSButtonDelegator.getClassInstance();
-  const checkBox = NSButton.alloc().init();
-  checkBox.setTarget(delegator);
-  checkBox.setAction("callback");
-  checkBox.setTitle("Use first row for\nartboard suffixes");
-  checkBox.setButtonType(NSSwitchButton);
-  checkBox.setTranslatesAutoresizingMaskIntoConstraints(false);
+  // const imgView = new ImageView(context);
+  // imgView.setImageFromResource("grid_suffix.png");
 
-  const previewSubviews = {
-    img: imgView,
-    checkBox
-  };
-  preview.addSubview(imgView);
-  preview.addSubview(checkBox);
-  const previewHConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("H:|-0-[img(348)]-[checkBox]->=0-|", 0, null, previewSubviews);
-  const previewVImgConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-0-[img(180)]->=0-|", 0, null, previewSubviews);
-  const previewVCheckBoxConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-7-[checkBox]->=0-|", 0, null, previewSubviews);
-  preview.addConstraints(previewHConstraints);
-  preview.addConstraints(previewVCheckBoxConstraints);
-  preview.addConstraints(previewVImgConstraints);
+  // const checkBox = new Checkbox("Use first row for\nartboard suffixes");
+  // checkBox.onSelectionChanged((checked) => {
+  //   const resource = checked ? "grid_suffix.png" : "grid.png";
+  //   imgView.setImageFromResource(resource);
+  //   state.firstRowForSuffix = checked;
+  // });
 
-  window.addAccessoryView(preview);
+  // const previewSubviews = { imgView, checkBox };
+  // preview.addSubview(imgView);
+  // preview.addSubview(checkBox);
+  // preview.addVisualConstraint("H:|-0-[imgView(348)]-[checkBox]->=0-|", previewSubviews);
+  // preview.addVisualConstraint("V:|-0-[imgView(180)]->=0-|", previewSubviews);
+  // preview.addVisualConstraint("V:|-7-[checkBox]->=0-|", previewSubviews);
 
-  new DropdownButton()
-    .setLabel("Apply to:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT)
-    .addItems(["Selected artboards"])
-    .onSelectionChanged((idx) => { state.applyTo = idx })
-    .addToWindow(window);
+  // window.addAccessoryView(preview.nativeView);
 
-  new DropdownButton()
-    .setLabel("New artboards to the:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT)
-    .addItems(["Right"])
-    .onSelectionChanged(() => { state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT })
-    .addToWindow(window);
+  // const applyToLabel = new TextField("Apply to:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const applyToDropdown = new DropdownButton()
+  //   .addItems(["Selected artboards"])
+  //   .onSelectionChanged((idx) => { state.applyTo = idx });
+  // const applyToRow = new Row(applyToLabel, applyToDropdown);
 
-  new DropdownButton()
-    .setLabel("Case matching:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT)
-    .addItems(["Case sensitive"])
-    .onSelectionChanged(() => { state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE })
-    .addToWindow(window);
+  // const artboardPositionLabel = new TextField("New artboards to the:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const artboardPositionDropdown = new DropdownButton()
+  //                                    .addItems(["Right"])
+  //                                    .onSelectionChanged(() => { state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT })
+  // const artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
-  window.addButtonWithTitle("Replace text");
-  window.addButtonWithTitle("Cancel");
+  // const caseLabel = new TextField("Case matching:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const caseDropdown = new DropdownButton()
+  //   .addItems(["Case sensitive"])
+  //   .onSelectionChanged(() => { state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE })
+  // const caseRow = new Row(caseLabel, caseDropdown);
+
+  // const dropdownsView = new View();
+  // dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
+  // dropdownsView.addSubview(applyToRow);
+  // dropdownsView.addSubview(artboardRow);
+  // dropdownsView.addSubview(caseRow);
+  // dropdownsView.addVisualConstraint("V:|-[applyTo]-[artboards]-[case]|", { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
+  // artboardRow.alignWith(applyToRow);
+  // caseRow.alignWith(applyToRow);
+
+  // window.addAccessoryView(dropdownsView.nativeView);
+
+  window.addButtonWithTitle('Replace text');
+  window.addButtonWithTitle('Cancel');
 
   const btns = window.buttons();
   const replaceBtn = btns[0];
-  const ReplaceButtonDelegator = new Delegator({
-    callback: () => {
-      if(verifySelection(context)) {
-        const selectedLayers = api.selectedDocument.selectedLayers;
-        const selection = new Iterator(selectedLayers);
-        const artboards = selection.filter((layer) => layer.isArtboard);
-        const parser = new ExcelParser(state.firstRowForSuffix);
-        const translatedContent = parser.parse(state.content);
-        artboards.forEach((layer) => {
-          const frame = layer.frame;
-          for (const key in translatedContent) {
-            const translations = translatedContent[key];
-            const duplicatedLayer = layer.duplicate();
-            frame.offset(frame.width + 20, 0);
-            duplicatedLayer.frame = frame;
-            duplicatedLayer.name = duplicatedLayer.name + "-" + key;
-            const iterator = new Iterator([duplicatedLayer]);
-            const texts = iterator.filter((layer) => layer.isText, true);
-            texts.forEach((layer) => {
-              const text = String(layer.text);
-              const translation = translations[text] || text;
-              layer.text = translation;
-            });
-          }
-        });
-      }
-    }
-  });
+  const ReplaceButtonDelegator = new Delegator({ callback: () => translateTexts(api, state, window) });
   const replaceDelegator = ReplaceButtonDelegator.getClassInstance();
   replaceBtn.setTarget(replaceDelegator);
-  replaceBtn.setAction("callback");
+  replaceBtn.setAction('callback');
   replaceBtn.setHighlighted(true);
 
-  const CancelButtonDelegator = new Delegator({
-    callback: () => {
-      window.close();
-    }
-  });
+  const CancelButtonDelegator = new Delegator({ callback: () => window.close() });
   const cancelDelegator = CancelButtonDelegator.getClassInstance();
   const cancelBtn = btns[1];
   cancelBtn.setTarget(cancelDelegator);
-  cancelBtn.setAction("callback");
+  cancelBtn.setAction('callback');
   cancelBtn.setHighlighted(false);
+
+  const btn = new Button('test');
+  btns.push(btn);
 
   return window;
 };

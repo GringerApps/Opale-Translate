@@ -50,6 +50,6 @@ NSButtonCell = class NSButtonCell {
   }
 
   setEnabled(enabled) {
-    this._enabled = true;
+    this._enabled = enabled;
   }
-}
+};

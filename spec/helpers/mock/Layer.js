@@ -31,22 +31,22 @@ Group = class Group extends Layer {
   get isGroup() {
     return true;
   }
-}
+};
 
 Page = class Page extends Group {
   get isPage() {
     return true;
   }
-}
+};
 
 Artboard = class Artboard extends Group {
   get isArtboard() {
     return true;
   }
-}
+};
 
 Text = class Text extends Layer {
   get isText() {
     return true;
   }
-}
+};

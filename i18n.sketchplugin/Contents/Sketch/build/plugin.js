@@ -1,12 +1,12 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-const Window = require("./Window");
+const Window = require('./Window');
 
 class AlertWindow {
   constructor(title) {
     const window = COSAlertWindow.new();
 
     window.setMessageText(title);
-    window.addButtonWithTitle("OK");
+    window.addButtonWithTitle('OK');
 
     this.window = window;
   }
@@ -19,7 +19,43 @@ class AlertWindow {
 
 module.exports = AlertWindow;
 
-},{"./Window":8}],2:[function(require,module,exports){
+},{"./Window":10}],2:[function(require,module,exports){
+const View = require('./View');
+const Delegator = require('./Delegator');
+
+class Button extends View {
+  constructor(title) {
+    const button = NSButton.alloc().init();
+    super(button);
+
+    const self = this;
+    const delegator = new Delegator({ 'callback': () => self._onClick() });
+
+    button.setTitle(title);
+    button.setButtonType(NSMomentaryLightButton);
+    button.setBezelStyle(NSRoundedBezelStyle);
+    button.setTarget(delegator.getClassInstance());
+    button.setAction('callback');
+
+    this._onClick = () => {};
+  }
+
+  onClick(callback) {
+    this._onClick = callback;
+  }
+
+  setHighlighted(highlighted) {
+    this.nativeView.setHighlighted(highlighted);
+  }
+
+  setTitle(title) {
+    this.nativeView.setTitle(title);
+  }
+}
+
+module.exports = Button;
+
+},{"./Delegator":3,"./View":9}],3:[function(require,module,exports){
 class Delegator {
   constructor(selectorHandlerDict, superclass) {
     this.uniqueClassName = 'Delegator_DynamicClass_' + NSUUID.UUID().UUIDString();
@@ -53,22 +89,6 @@ class Delegator {
     }
   }
 
-  removeHandlerForSelector(selectorString) {
-    delete this.handlers[selectorString];
-  }
-
-  getHandlerForSelector(selectorString) {
-    return this.handlers[selectorString];
-  }
-
-  getAllHandlers() {
-    return this.handlers;
-  }
-
-  getClass() {
-    return NSClassFromString(this.uniqueClassName);
-  }
-
   getClassInstance() {
     const instance = NSClassFromString(this.uniqueClassName).alloc().init();
     return instance;
@@ -77,136 +97,7 @@ class Delegator {
 
 module.exports = Delegator;
 
-},{}],3:[function(require,module,exports){
-const Delegator = require("./Delegator");
-
-class DropdownButton {
-  static get ALIGNMENT() {
-    return {
-      HORIZONTAL: 0,
-      VERTICAL: 1
-    };
-  }
-  static get TEXT_ALIGNMENT() {
-    return {
-      LEFT: 0,
-      RIGHT: 1
-    };
-  }
-
-  constructor(pullsDown = false) {
-    const FRAME = NSMakeRect(0, 0, 160.0, 22);
-
-    const self = this;
-    const NSPopUpButtonDelegator = new Delegator({
-      callback: () => {
-        self._selectionChanged();
-      }
-    });
-    const delegator = NSPopUpButtonDelegator.getClassInstance();
-
-    const popupBtn = NSPopUpButton.alloc().initWithFrame_pullsDown(FRAME, pullsDown);
-    popupBtn.setAction("callback");
-    popupBtn.setTarget(delegator);
-
-    this._selectionChangedCallback = () => {};
-    this._btn = popupBtn;
-    this._label = {
-      alignment: DropdownButton.ALIGNMENT.HORIZONTAL,
-      title: null,
-      text_alignment:DropdownButton.TEXT_ALIGNMENT.LEFT
-    };
-  }
-
-  _selectionChanged() {
-    const idx = this._btn.indexOfSelectedItem();
-    const title = this._btn.titleOfSelectedItem();
-    this._selectionChangedCallback(idx, title);
-  }
-
-  _hasLabel() {
-    return this._label.title !== null;
-  }
-
-  _valign() {
-    return this._label.alignment === DropdownButton.ALIGNMENT.VERTICAL;
-  }
-
-  onSelectionChanged(callback) {
-    this._selectionChangedCallback = callback;
-    return this;
-  }
-
-  setLabel(title, alignment, text_alignment) {
-    if (alignment !== undefined) {
-      this._label.alignment = alignment;
-    }
-    if (text_alignment !== undefined) {
-      this._label.text_alignment = text_alignment;
-    }
-    this._label.title = title;
-    return this;
-  }
-
-  addItem(title) {
-    this._btn.addItemWithTitle(title);
-    return this;
-  }
-
-  addItems(titles) {
-    this._btn.addItemsWithTitles(titles);
-    return this;
-  }
-
-  addToWindow(window) {
-    const btn = this._btn;
-    const frame = this._hasLabel() && this._valign() ? NSMakeRect(0, 0, 300, 37) : NSMakeRect(0, 0, 300, 23);
-    const view = NSView.alloc().initWithFrame(frame);
-
-    let x = 0;
-    let y = 0;
-
-    let tf;
-
-    if (this._hasLabel()) {
-      const tfFrame = NSMakeRect(x, y, 140, 16);
-      tf = NSTextField.alloc().initWithFrame(tfFrame);
-      tf.setDrawsBackground(false);
-      tf.setEditable(false);
-      tf.setBezeled(false);
-      tf.setSelectable(true);
-      tf.setStringValue(this._label.title);
-      tf.setAlignment(this._label.text_alignment);
-      tf.setFont(NSFont.systemFontOfSize(11.5));
-
-      if(this._valign()) {
-        y += NSHeight(tfFrame);
-      } else {
-        const tfOrigin = NSMakePoint(x, (NSHeight(frame) - NSHeight(tfFrame)) / 2);
-        tf.setFrameOrigin(tfOrigin);
-        tf.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-        x += NSWidth(tfFrame);
-      }
-      view.addSubview(tf);
-    }
-
-    var btnFrame = btn.bounds();1
-    if (this._valign()) {
-      btn.setFrameOrigin(NSMakePoint(x, y));
-    } else {
-      const btnOrigin = NSMakePoint(x, (NSHeight(frame) - NSHeight(btnFrame)) / 2);
-      btn.setFrameOrigin(btnOrigin);
-      btn.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-    }
-
-    view.addSubview(btn);
-    window.addAccessoryView(view);
-  }
-}
-
-module.exports = DropdownButton;
-
-},{"./Delegator":2}],4:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 class FilePicker {
   constructor() {
     const panel = NSOpenPanel.openPanel();
@@ -219,12 +110,14 @@ class FilePicker {
   }
 
   show() {
-    this.modalResult = this.panel.runModal();
-  };
+    const result = this.panel.runModal();
+    this.modalResult = result;
+    return result == NSFileHandlingPanelOKButton;
+  }
 
   choseFiles() {
     return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
-  };
+  }
 
   files() {
     return this.panel.filenames();
@@ -234,86 +127,63 @@ class FilePicker {
 module.exports = FilePicker;
 
 },{}],5:[function(require,module,exports){
-const FilePicker = require("./FilePicker");
-const Delegator = require("./Delegator");
+const FilePicker = require('./FilePicker');
+const Delegator = require('./Delegator');
+const View = require('./View');
+const Button = require('./Button');
+const TextField = require('./TextField');
 
-const DEFAULT_BUTTON_TITLE = "Select file";
+const DEFAULT_BUTTON_TITLE = 'Select file';
 
-class FilePickerButton {
+class FilePickerButton extends View {
   constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
+    super();
+
     const self = this;
-    const FILE_PICKER_DELEGATOR = new Delegator({
-      "callback": () => self._onClick()
-    });
-    const target = FILE_PICKER_DELEGATOR.getClassInstance();
-    const button = NSButton.buttonWithTitle_target_action_(buttonTitle, target, "callback");
-    button.setHighlighted(true);
+    this._button = new Button(buttonTitle);
+    this._button.onClick(() => self._onClick());
+    this._button.setHighlighted(true);
 
-    const labelFrame = NSMakeRect(0, 0, 180, 20);
-    const label = NSTextField.alloc().initWithFrame(labelFrame);
-    label.setDrawsBackground(false);
-    label.setEditable(false);
-    label.setBezeled(false);
-    label.setSelectable(true);
-    label.setStringValue(labelText);
+    this._label = new TextField(labelText);
 
-    this._label = label;
-    this._button = button;
+    this._filePicker = new FilePicker();
+
     this._onFileSelected = () => {};
+
+    this.addSubview(this._label);
+    this.addSubview(this._button);
+
+    const constraintMapping = {
+      button: this._button,
+      label: this._label
+    };
+    this.addVisualConstraint('H:|-0-[label]-[button]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[label]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[button]->=0-|', constraintMapping);
   }
 
   _onClick() {
-    const picker = new FilePicker();
+    const picker = this._filePicker;
     picker.show();
-    const files = picker.files();
-    this._button.setTitle("Replace file");
-    this._button.setFrameSize(NSMakeSize(200, this._button.frame().size.height));
-    this._label.setStringValue('Spreadsheet: ' + filename);
-    this._onFileSelected(files);
+    if(picker.choseFiles()) {
+      const files = picker.files();
+      this._button.setTitle('Replace file');
+      this._onFileSelected(files);
+    }
   }
 
   setLabel(label) {
-    this._label.setStringValue(label);
+    this._label.setText(label);
   }
 
   onFileSelected(callback) {
     this._onFileSelected = callback;
   }
-
-  addToWindow(window) {
-    const view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 400, 30));
-    const button = this._button;
-    const label = this._label;
-
-    const viewFrame = view.frame();
-    const buttonFrame = button.frame();
-    const labelFrame = button.frame();
-
-    const buttonOrigin = NSMakePoint(
-      labelFrame.origin.x + labelFrame.size.width,
-      (NSHeight(viewFrame) - NSHeight(buttonFrame)) / 2
-    );
-    button.setFrameOrigin(buttonOrigin);
-    button.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-
-    const labelOrigin = NSMakePoint(
-      labelFrame.origin.x,
-      (NSHeight(viewFrame) - NSHeight(labelFrame)) / 2
-    );
-    label.setFrameOrigin(labelOrigin);
-    label.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-    view.addSubview(label);
-    view.addSubview(button);
-
-    window.addAccessoryView(view);
-  }
 }
 
 module.exports = FilePickerButton;
 
-},{"./Delegator":2,"./FilePicker":4}],6:[function(require,module,exports){
+},{"./Button":2,"./Delegator":3,"./FilePicker":4,"./TextField":8,"./View":9}],6:[function(require,module,exports){
 class ArrayWrapper {
   constructor(array) {
     this.array = array;
@@ -328,7 +198,7 @@ class ArrayWrapper {
       callback(this.array[i]);
     }
   }
-};
+}
 
 class Iterator {
   constructor(list) {
@@ -389,7 +259,7 @@ class Iterator {
     const result = [];
     this.iterate((layer) => {
       result.push(layer);
-    }, deep)
+    }, deep);
     return result;
   }
 
@@ -401,8 +271,8 @@ class Iterator {
 module.exports = Iterator;
 
 },{}],7:[function(require,module,exports){
-const XLSX = require("xlsx");
-const { TextEncoder } = require("text-encoding");
+const XLSX = require('xlsx');
+const { TextEncoder } = require('text-encoding');
 
 class I18nGoParser {
   get encoding() {
@@ -434,10 +304,10 @@ class ExcelParser {
   }
 
   parse(content) {
-    const result = {}
+    const result = {};
     for (let key in content) {
       const fileContent = String(content[key]);
-      const workbook = XLSX.read(fileContent, { type: "binary" });
+      const workbook = XLSX.read(fileContent, { type: 'binary' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });
@@ -465,20 +335,128 @@ module.exports = {
   ExcelParser
 };
 
-},{"text-encoding":17,"xlsx":22}],8:[function(require,module,exports){
- const { scaleFrame } = require("./viewhelper");
+},{"text-encoding":19,"xlsx":24}],8:[function(require,module,exports){
+const View = require('./View');
 
- class Window {
-   constructor() {
-     const x = 0, y = 0, w = 500, h = 300;
-     this._views = []
-     this._frame = NSMakeRect(x, y, w, h);
-     this._alert = NSAlert.new();
-	}
+class TextField extends View {
+  static get TEXT_ALIGNMENT() {
+    return {
+      LEFT: 0,
+      RIGHT: 1
+    };
+  }
+
+  constructor(text, textAlignment = TextField.TEXT_ALIGNMENT.LEFT) {
+    const textField = NSTextField.alloc().init();
+    super(textField);
+    this.setTextAlignment(textAlignment)
+      .setDrawsBackground(false)
+      .setEditable(false)
+      .setBezeled(false)
+      .setSelectable(true)
+      .setText(text);
+  }
+
+  setTextAlignment(alignment) {
+    this.nativeView.setAlignment(alignment);
+    return this;
+  }
+
+  setDrawsBackground(drawsBackground) {
+    this.nativeView.setDrawsBackground(drawsBackground);
+    return this;
+  }
+
+  setEditable(editable) {
+    this.nativeView.setEditable(editable);
+    return this;
+  }
+
+  setBezeled(bezeled) {
+    this.nativeView.setBezeled(bezeled);
+    return this;
+  }
+
+  setSelectable(selectable) {
+    this.nativeView.setSelectable(selectable);
+    return this;
+  }
+
+  setText(text) {
+    this.nativeView.setStringValue(text);
+    return this;
+  }
+}
+
+module.exports = TextField;
+
+},{"./View":9}],9:[function(require,module,exports){
+class View {
+  static get LAYOUT_TYPE() {
+    return {
+      FRAME: 0,
+      CONSTRAINTS: 1
+    };
+  }
+
+  constructor(nativeView = null) {
+    this._subviews = [];
+    this._nativeView = nativeView || NSView.alloc().initWithFrame(NSMakeRect(0, 0, 0, 0));
+    this.setLayoutType(this.constructor.LAYOUT_TYPE.CONSTRAINTS);
+  }
+
+  get nativeView() {
+    return this._nativeView;
+  }
+
+  setFrame(frame) {
+    this.nativeView.setFrame(frame);
+  }
+
+  addSubview(subview) {
+    this._subviews.push(subview);
+    this.nativeView.addSubview(subview.nativeView);
+  }
+
+  addVisualConstraint(constraintStr, mapping) {
+    const nativeMapping = {};
+    Object.keys(mapping).forEach(function(key) {
+      nativeMapping[key] = mapping[key].nativeView;
+    });
+    const constraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(constraintStr, 0, null, nativeMapping);
+    this.nativeView.addConstraints(constraints);
+  }
+
+  addConstraint(opts) {
+    opts = Object.assign({ multiplier: 1, constant: 0, relatedBy: NSLayoutRelationEqual }, opts);
+    const { to, attr, relatedBy, multiplier, constant } = opts;
+    NSLayoutConstraint.constraintWithItem_attribute_relatedBy_toItem_attribute_multiplier_constant(
+      this.nativeView, attr, relatedBy, to.nativeView, attr, multiplier, constant
+    ).setActive(true);
+  }
+
+  setLayoutType(type) {
+    const frameType = this.constructor.LAYOUT_TYPE.FRAME;
+    this.nativeView.setTranslatesAutoresizingMaskIntoConstraints(type == frameType);
+  }
+}
+
+module.exports = View;
+
+},{}],10:[function(require,module,exports){
+const { scaleFrame } = require('./viewhelper');
+
+class Window {
+  constructor() {
+    const x = 0, y = 0, w = 500, h = 300;
+    this._views = [];
+    this._frame = NSMakeRect(x, y, w, h);
+    this._alert = NSAlert.new();
+  }
 
   _layout() {
     if (!this._views) {
-        return;
+      return;
     }
 
     let height = 0;
@@ -547,41 +525,42 @@ module.exports = {
 
 module.exports = Window;
 
-},{"./viewhelper":11}],9:[function(require,module,exports){
+},{"./viewhelper":13}],11:[function(require,module,exports){
 module.exports = {
-  TITLE: "Opal Translate",
+  TITLE: 'Opal Translate',
   MESSAGES: {
-    WRONG_SELECTION: "Only Artboards can be translated by this plugin",
-    EMPTY_SELECTION: "Please select an artboard to be translated",
-    NO_FILE_SELECTED: "Please select at least a translation file",
+    WRONG_SELECTION: 'Only Artboards can be translated by this plugin',
+    EMPTY_SELECTION: 'Please select an artboard to be translated',
+    NO_FILE_SELECTED: 'Please select at least a translation file',
   },
   SCALE_FACTOR: 0.5
 };
 
-},{}],10:[function(require,module,exports){
-var Iterator = require("./Iterator");
+},{}],12:[function(require,module,exports){
+var Iterator = require('./Iterator');
 
-var _require = require("./Parsers"),
-    I18nGoParser = _require.I18nGoParser,
+var _require = require('./Parsers'),
     ExcelParser = _require.ExcelParser;
 
-var AlertWindow = require("./AlertWindow");
-var FilePickerButton = require("./FilePickerButton");
-var Delegator = require("./Delegator");
-var Window = require("./Window");
-var DropdownButton = require("./DropdownButton");
+var AlertWindow = require('./AlertWindow');
+var FilePickerButton = require('./FilePickerButton');
+var Delegator = require('./Delegator');
+var Window = require('./Window');
 
-var _require2 = require("./viewhelper"),
-    scaleFrame = _require2.scaleFrame;
+var _require2 = require('./consts'),
+    TITLE = _require2.TITLE,
+    MESSAGES = _require2.MESSAGES;
 
-var _require3 = require("./consts"),
-    TITLE = _require3.TITLE,
-    MESSAGES = _require3.MESSAGES;
+var View = require('./View');
+// const TextField = require('./TextField');
+// const Row = require('./Row');
+// const ImageView = require('./ImageView');
+// const Checkbox = require('./Checkbox');
+var Button = require('./Button');
 
 var ALERT = new AlertWindow(TITLE);
 
-var verifySelection = function verifySelection(context) {
-  var api = context.api();
+var verifySelection = function verifySelection(api) {
   var selectedLayers = api.selectedDocument.selectedLayers;
   var selection = new Iterator(selectedLayers);
 
@@ -602,6 +581,43 @@ var verifySelection = function verifySelection(context) {
   return true;
 };
 
+var translateTexts = function translateTexts(api, state, window) {
+  if (verifySelection(api)) {
+    var selectedLayers = api.selectedDocument.selectedLayers;
+    var selection = new Iterator(selectedLayers);
+    var artboards = selection.filter(function (layer) {
+      return layer.isArtboard;
+    });
+    var parser = new ExcelParser(state.firstRowForSuffix);
+    var translatedContent = parser.parse(state.content);
+    artboards.forEach(function (layer) {
+      var frame = layer.frame;
+
+      var _loop = function _loop(key) {
+        var translations = translatedContent[key];
+        var duplicatedLayer = layer.duplicate();
+        frame.offset(frame.width + 20, 0);
+        duplicatedLayer.frame = frame;
+        duplicatedLayer.name = duplicatedLayer.name + '-' + key;
+        var iterator = new Iterator([duplicatedLayer]);
+        var texts = iterator.filter(function (layer) {
+          return layer.isText;
+        }, true);
+        texts.forEach(function (layer) {
+          var text = String(layer.text);
+          var translation = translations[text] || text;
+          layer.text = translation;
+        });
+      };
+
+      for (var key in translatedContent) {
+        _loop(key);
+      }
+    });
+    window.close();
+  }
+};
+
 var OPTIONS = {
   APPLY_TO: {
     SELECTED_ARTBOARDS: 0
@@ -620,11 +636,14 @@ var BTN_CLICKED = {
 };
 
 var buildView = function buildView(context, state) {
+  var api = context.api();
   var window = new Window();
-  window.setMessageText("Opale");
-  window.setInformativeText("Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)");
+  window.setMessageText('Opale');
+  window.setInformativeText('Duplicates your artboards and replaces the text in them using the text in a spreadsheet file (.xls, .xlsx or .ods)');
 
-  var fileSelectButton = new FilePickerButton("Select a spreadsheet");
+  var fileSelectButton = new FilePickerButton('Select a spreadsheet');
+  fileSelectButton.setFrame(NSMakeRect(0, 0, 400, 30));
+  fileSelectButton.setLayoutType(View.LAYOUT_TYPE.FRAME);
   fileSelectButton.onFileSelected(function (files) {
     var result = {};
     if (files.length < 1) {
@@ -635,130 +654,95 @@ var buildView = function buildView(context, state) {
     for (var i = 0; i < files.length; i++) {
       var fullpath = files[i];
 
-      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, encoding, null);
-      var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, "");
+      var content = NSString.alloc().initWithContentsOfFile_encoding_error_(fullpath, NSISOLatin1StringEncoding, null);
+      var _filename = fullpath.split('\\').pop().split('/').pop().replace(/\.[^/.]+$/, '');
       result[_filename] = content;
       state.content = result;
     }
   });
 
-  fileSelectButton.addToWindow(window);
+  window.addAccessoryView(fileSelectButton.nativeView);
 
-  var preview = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 480, 180));
-  var gridUrl = api.resourceNamed("grid.png");
-  var gridSuffixUrl = api.resourceNamed("grid_suffix.png");
-  var gridImage = NSImage.alloc().initWithContentsOfURL(gridUrl);
-  var gridSuffixImage = NSImage.alloc().initWithContentsOfURL(gridSuffixUrl);
-  var imgView = NSImageView.alloc().init();
-  imgView.setImage(gridImage);
-  imgView.setImageAlignment(2);
-  imgView.setImageScaling(0);
-  imgView.setTranslatesAutoresizingMaskIntoConstraints(false);
+  // const preview = new View();
+  // preview.setFrame(NSMakeRect(0, 0, 480, 180));
 
-  var NSButtonDelegator = new Delegator({
-    callback: function callback() {
-      imgView.setImage(checkBox.state() == NSOnState ? gridSuffixImage : gridImage);
-      state.firstRowForSuffix = checkBox.state() == NSOnState;
-    }
-  });
-  var delegator = NSButtonDelegator.getClassInstance();
-  var checkBox = NSButton.alloc().init();
-  checkBox.setTarget(delegator);
-  checkBox.setAction("callback");
-  checkBox.setTitle("Use first row for\nartboard suffixes");
-  checkBox.setButtonType(NSSwitchButton);
-  checkBox.setTranslatesAutoresizingMaskIntoConstraints(false);
+  // const imgView = new ImageView(context);
+  // imgView.setImageFromResource("grid_suffix.png");
 
-  var previewSubviews = {
-    img: imgView,
-    checkBox: checkBox
-  };
-  preview.addSubview(imgView);
-  preview.addSubview(checkBox);
-  var previewHConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("H:|-0-[img(348)]-[checkBox]->=0-|", 0, null, previewSubviews);
-  var previewVImgConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-0-[img(180)]->=0-|", 0, null, previewSubviews);
-  var previewVCheckBoxConstraints = NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_("V:|-7-[checkBox]->=0-|", 0, null, previewSubviews);
-  preview.addConstraints(previewHConstraints);
-  preview.addConstraints(previewVCheckBoxConstraints);
-  preview.addConstraints(previewVImgConstraints);
+  // const checkBox = new Checkbox("Use first row for\nartboard suffixes");
+  // checkBox.onSelectionChanged((checked) => {
+  //   const resource = checked ? "grid_suffix.png" : "grid.png";
+  //   imgView.setImageFromResource(resource);
+  //   state.firstRowForSuffix = checked;
+  // });
 
-  window.addAccessoryView(preview);
+  // const previewSubviews = { imgView, checkBox };
+  // preview.addSubview(imgView);
+  // preview.addSubview(checkBox);
+  // preview.addVisualConstraint("H:|-0-[imgView(348)]-[checkBox]->=0-|", previewSubviews);
+  // preview.addVisualConstraint("V:|-0-[imgView(180)]->=0-|", previewSubviews);
+  // preview.addVisualConstraint("V:|-7-[checkBox]->=0-|", previewSubviews);
 
-  new DropdownButton().setLabel("Apply to:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Selected artboards"]).onSelectionChanged(function (idx) {
-    state.applyTo = idx;
-  }).addToWindow(window);
+  // window.addAccessoryView(preview.nativeView);
 
-  new DropdownButton().setLabel("New artboards to the:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Right"]).onSelectionChanged(function () {
-    state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT;
-  }).addToWindow(window);
+  // const applyToLabel = new TextField("Apply to:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const applyToDropdown = new DropdownButton()
+  //   .addItems(["Selected artboards"])
+  //   .onSelectionChanged((idx) => { state.applyTo = idx });
+  // const applyToRow = new Row(applyToLabel, applyToDropdown);
 
-  new DropdownButton().setLabel("Case matching:", DropdownButton.ALIGNMENT.HORIZONTAL, DropdownButton.TEXT_ALIGNMENT.RIGHT).addItems(["Case sensitive"]).onSelectionChanged(function () {
-    state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE;
-  }).addToWindow(window);
+  // const artboardPositionLabel = new TextField("New artboards to the:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const artboardPositionDropdown = new DropdownButton()
+  //                                    .addItems(["Right"])
+  //                                    .onSelectionChanged(() => { state.addNewArtboardTo = OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT })
+  // const artboardRow = new Row(artboardPositionLabel, artboardPositionDropdown);
 
-  window.addButtonWithTitle("Replace text");
-  window.addButtonWithTitle("Cancel");
+  // const caseLabel = new TextField("Case matching:", TextField.TEXT_ALIGNMENT.RIGHT);
+  // const caseDropdown = new DropdownButton()
+  //   .addItems(["Case sensitive"])
+  //   .onSelectionChanged(() => { state.caseMatching = OPTIONS.CASE_MATCHING.SENSITIVE })
+  // const caseRow = new Row(caseLabel, caseDropdown);
+
+  // const dropdownsView = new View();
+  // dropdownsView.setFrame(NSMakeRect(0, 0, 400, 50));
+  // dropdownsView.addSubview(applyToRow);
+  // dropdownsView.addSubview(artboardRow);
+  // dropdownsView.addSubview(caseRow);
+  // dropdownsView.addVisualConstraint("V:|-[applyTo]-[artboards]-[case]|", { applyTo: applyToRow, artboards: artboardRow, case: caseRow });
+  // artboardRow.alignWith(applyToRow);
+  // caseRow.alignWith(applyToRow);
+
+  // window.addAccessoryView(dropdownsView.nativeView);
+
+  window.addButtonWithTitle('Replace text');
+  window.addButtonWithTitle('Cancel');
 
   var btns = window.buttons();
   var replaceBtn = btns[0];
-  var ReplaceButtonDelegator = new Delegator({
-    callback: function callback() {
-      if (verifySelection(context)) {
-        var selectedLayers = api.selectedDocument.selectedLayers;
-        var selection = new Iterator(selectedLayers);
-        var artboards = selection.filter(function (layer) {
-          return layer.isArtboard;
-        });
-        var parser = new ExcelParser(state.firstRowForSuffix);
-        var translatedContent = parser.parse(state.content);
-        artboards.forEach(function (layer) {
-          var frame = layer.frame;
-
-          var _loop = function _loop(key) {
-            var translations = translatedContent[key];
-            var duplicatedLayer = layer.duplicate();
-            frame.offset(frame.width + 20, 0);
-            duplicatedLayer.frame = frame;
-            duplicatedLayer.name = duplicatedLayer.name + "-" + key;
-            var iterator = new Iterator([duplicatedLayer]);
-            var texts = iterator.filter(function (layer) {
-              return layer.isText;
-            }, true);
-            texts.forEach(function (layer) {
-              var text = String(layer.text);
-              var translation = translations[text] || text;
-              layer.text = translation;
-            });
-          };
-
-          for (var key in translatedContent) {
-            _loop(key);
-          }
-        });
-      }
-    }
-  });
+  var ReplaceButtonDelegator = new Delegator({ callback: function callback() {
+      return translateTexts(api, state, window);
+    } });
   var replaceDelegator = ReplaceButtonDelegator.getClassInstance();
   replaceBtn.setTarget(replaceDelegator);
-  replaceBtn.setAction("callback");
+  replaceBtn.setAction('callback');
   replaceBtn.setHighlighted(true);
 
-  var CancelButtonDelegator = new Delegator({
-    callback: function callback() {
-      window.close();
-    }
-  });
+  var CancelButtonDelegator = new Delegator({ callback: function callback() {
+      return window.close();
+    } });
   var cancelDelegator = CancelButtonDelegator.getClassInstance();
   var cancelBtn = btns[1];
   cancelBtn.setTarget(cancelDelegator);
-  cancelBtn.setAction("callback");
+  cancelBtn.setAction('callback');
   cancelBtn.setHighlighted(false);
+
+  var btn = new Button('test');
+  btns.push(btn);
 
   return window;
 };
 
 translate = function translate(context) {
-  var api = context.api();
   var state = {
     applyTo: OPTIONS.APPLY_TO.SELECTED_ARTBOARDS,
     addNewArtboardTo: OPTIONS.ADD_ARTBOARD_TO.THE_RIGHT,
@@ -767,10 +751,11 @@ translate = function translate(context) {
     content: {}
   };
 
+  var window = buildView(context, state);
   window.runModal();
 };
-},{"./AlertWindow":1,"./Delegator":2,"./DropdownButton":3,"./FilePickerButton":5,"./Iterator":6,"./Parsers":7,"./Window":8,"./consts":9,"./viewhelper":11}],11:[function(require,module,exports){
-const { SCALE_FACTOR } = require("./consts");
+},{"./AlertWindow":1,"./Button":2,"./Delegator":3,"./FilePickerButton":5,"./Iterator":6,"./Parsers":7,"./View":9,"./Window":10,"./consts":11}],13:[function(require,module,exports){
+const { SCALE_FACTOR } = require('./consts');
 
 const scaleFrame = (frame) => {
   const origin = frame.origin;
@@ -781,7 +766,7 @@ const scaleFrame = (frame) => {
 module.exports = {
   scaleFrame
 };
-},{"./consts":9}],12:[function(require,module,exports){
+},{"./consts":11}],14:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -907,9 +892,9 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],13:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -2020,7 +2005,7 @@ function assert (test, message) {
   if (!test) throw new Error(message || 'Failed assertion')
 }
 
-},{"base64-js":12,"ieee754":16}],15:[function(require,module,exports){
+},{"base64-js":14,"ieee754":18}],17:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -2085,7 +2070,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -2171,7 +2156,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -2182,7 +2167,7 @@ module.exports = {
   TextDecoder: encoding.TextDecoder,
 };
 
-},{"./lib/encoding.js":19}],18:[function(require,module,exports){
+},{"./lib/encoding.js":21}],20:[function(require,module,exports){
 (function(global) {
   'use strict';
 
@@ -2230,7 +2215,7 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 // This is free and unencumbered software released into the public domain.
 // See LICENSE.md for more information.
 
@@ -5544,11 +5529,11 @@ module.exports = {
 // For strict environments where `this` inside the global scope
 // is `undefined`, take a pure object instead
 }(this || {}));
-},{"./encoding-indexes.js":18}],20:[function(require,module,exports){
+},{"./encoding-indexes.js":20}],22:[function(require,module,exports){
 (function (Buffer){
 /* cpexcel.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /*jshint -W100 */
-var cptable = {version:"1.8.0"};
+var cptable = {version:"1.9.0"};
 cptable[437] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[620] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÇüéâäàąçêëèïîćÄĄĘęłôöĆûùŚÖÜ¢Ł¥śƒŹŻóÓńŃźż¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[737] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρσςτυφχψ░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀ωάέήϊίόύϋώΆΈΉΊΌΎΏ±≥≤ΪΫ÷≈°∙·√ⁿ²■ ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
@@ -6352,6 +6337,172 @@ cptable[1258] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006
 cptable[10000] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄¤‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ�ÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[10006] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~Ä¹²É³ÖÜ΅àâä΄¨çéèêë£™îï•½‰ôö¦­ùûü†ΓΔΘΛΞΠß®©ΣΪ§≠°·Α±≤≥¥ΒΕΖΗΙΚΜΦΫΨΩάΝ¬ΟΡ≈Τ«»… ΥΧΆΈœ–―“”‘’÷ΉΊΌΎέήίόΏύαβψδεφγηιξκλμνοπώρστθωςχυζϊϋΐΰ�", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[10007] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ†°¢£§•¶І®©™Ђђ≠Ѓѓ∞±≤≥іµ∂ЈЄєЇїЉљЊњјЅ¬√ƒ≈∆«»… ЋћЌќѕ–—“”‘’÷„ЎўЏџ№Ёёяабвгдежзийклмнопрстуфхцчшщъыьэю¤", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
+cptable[10008] = (function(){ var d = [], e = {}, D = [], j;
+D[0] = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~���������������������������������������������������������������������������������������".split("");
+for(j = 0; j != D[0].length; ++j) if(D[0][j].charCodeAt(0) !== 0xFFFD) { e[D[0][j]] = 0 + j; d[0 + j] = D[0][j];}
+D[161] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������　、。・ˉˇ¨〃々―～�…‘’“”〔〕〈〉《》「」『』〖〗【】±×÷∶∧∨∑∏∪∩∈∷√⊥∥∠⌒⊙∫∮≡≌≈∽∝≠≮≯≤≥∞∵∴♂♀°′″℃＄¤￠￡‰§№☆★○●◎◇◆□■△▲※→←↑↓〓�".split("");
+for(j = 0; j != D[161].length; ++j) if(D[161][j].charCodeAt(0) !== 0xFFFD) { e[D[161][j]] = 41216 + j; d[41216 + j] = D[161][j];}
+D[162] = "���������������������������������������������������������������������������������������������������������������������������������������������������������������������������������⒈⒉⒊⒋⒌⒍⒎⒏⒐⒑⒒⒓⒔⒕⒖⒗⒘⒙⒚⒛⑴⑵⑶⑷⑸⑹⑺⑻⑼⑽⑾⑿⒀⒁⒂⒃⒄⒅⒆⒇①②③④⑤⑥⑦⑧⑨⑩��㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩��ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ���".split("");
+for(j = 0; j != D[162].length; ++j) if(D[162][j].charCodeAt(0) !== 0xFFFD) { e[D[162][j]] = 41472 + j; d[41472 + j] = D[162][j];}
+D[163] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������！＂＃￥％＆＇（）＊＋，－．／０１２３４５６７８９：；＜＝＞？＠ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿｀ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ｛｜｝￣�".split("");
+for(j = 0; j != D[163].length; ++j) if(D[163][j].charCodeAt(0) !== 0xFFFD) { e[D[163][j]] = 41728 + j; d[41728 + j] = D[163][j];}
+D[164] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽまみむめもゃやゅゆょよらりるれろゎわゐゑをん������������".split("");
+for(j = 0; j != D[164].length; ++j) if(D[164][j].charCodeAt(0) !== 0xFFFD) { e[D[164][j]] = 41984 + j; d[41984 + j] = D[164][j];}
+D[165] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶ���������".split("");
+for(j = 0; j != D[165].length; ++j) if(D[165][j].charCodeAt(0) !== 0xFFFD) { e[D[165][j]] = 42240 + j; d[42240 + j] = D[165][j];}
+D[166] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ��������αβγδεζηθικλμνξοπρστυφχψω���������������������������������������".split("");
+for(j = 0; j != D[166].length; ++j) if(D[166][j].charCodeAt(0) !== 0xFFFD) { e[D[166][j]] = 42496 + j; d[42496 + j] = D[166][j];}
+D[167] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ���������������абвгдеёжзийклмнопрстуфхцчшщъыьэюя��������������".split("");
+for(j = 0; j != D[167].length; ++j) if(D[167][j].charCodeAt(0) !== 0xFFFD) { e[D[167][j]] = 42752 + j; d[42752 + j] = D[167][j];}
+D[168] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüê����������ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦㄧㄨㄩ����������������������".split("");
+for(j = 0; j != D[168].length; ++j) if(D[168][j].charCodeAt(0) !== 0xFFFD) { e[D[168][j]] = 43008 + j; d[43008 + j] = D[168][j];}
+D[169] = "��������������������������������������������������������������������������������������������������������������������������������������������������������������������─━│┃┄┅┆┇┈┉┊┋┌┍┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┱┲┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋����������������".split("");
+for(j = 0; j != D[169].length; ++j) if(D[169][j].charCodeAt(0) !== 0xFFFD) { e[D[169][j]] = 43264 + j; d[43264 + j] = D[169][j];}
+D[176] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������啊阿埃挨哎唉哀皑癌蔼矮艾碍爱隘鞍氨安俺按暗岸胺案肮昂盎凹敖熬翱袄傲奥懊澳芭捌扒叭吧笆八疤巴拔跋靶把耙坝霸罢爸白柏百摆佰败拜稗斑班搬扳般颁板版扮拌伴瓣半办绊邦帮梆榜膀绑棒磅蚌镑傍谤苞胞包褒剥�".split("");
+for(j = 0; j != D[176].length; ++j) if(D[176][j].charCodeAt(0) !== 0xFFFD) { e[D[176][j]] = 45056 + j; d[45056 + j] = D[176][j];}
+D[177] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������薄雹保堡饱宝抱报暴豹鲍爆杯碑悲卑北辈背贝钡倍狈备惫焙被奔苯本笨崩绷甭泵蹦迸逼鼻比鄙笔彼碧蓖蔽毕毙毖币庇痹闭敝弊必辟壁臂避陛鞭边编贬扁便变卞辨辩辫遍标彪膘表鳖憋别瘪彬斌濒滨宾摈兵冰柄丙秉饼炳�".split("");
+for(j = 0; j != D[177].length; ++j) if(D[177][j].charCodeAt(0) !== 0xFFFD) { e[D[177][j]] = 45312 + j; d[45312 + j] = D[177][j];}
+D[178] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������病并玻菠播拨钵波博勃搏铂箔伯帛舶脖膊渤泊驳捕卜哺补埠不布步簿部怖擦猜裁材才财睬踩采彩菜蔡餐参蚕残惭惨灿苍舱仓沧藏操糙槽曹草厕策侧册测层蹭插叉茬茶查碴搽察岔差诧拆柴豺搀掺蝉馋谗缠铲产阐颤昌猖�".split("");
+for(j = 0; j != D[178].length; ++j) if(D[178][j].charCodeAt(0) !== 0xFFFD) { e[D[178][j]] = 45568 + j; d[45568 + j] = D[178][j];}
+D[179] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������场尝常长偿肠厂敞畅唱倡超抄钞朝嘲潮巢吵炒车扯撤掣彻澈郴臣辰尘晨忱沉陈趁衬撑称城橙成呈乘程惩澄诚承逞骋秤吃痴持匙池迟弛驰耻齿侈尺赤翅斥炽充冲虫崇宠抽酬畴踌稠愁筹仇绸瞅丑臭初出橱厨躇锄雏滁除楚�".split("");
+for(j = 0; j != D[179].length; ++j) if(D[179][j].charCodeAt(0) !== 0xFFFD) { e[D[179][j]] = 45824 + j; d[45824 + j] = D[179][j];}
+D[180] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������础储矗搐触处揣川穿椽传船喘串疮窗幢床闯创吹炊捶锤垂春椿醇唇淳纯蠢戳绰疵茨磁雌辞慈瓷词此刺赐次聪葱囱匆从丛凑粗醋簇促蹿篡窜摧崔催脆瘁粹淬翠村存寸磋撮搓措挫错搭达答瘩打大呆歹傣戴带殆代贷袋待逮�".split("");
+for(j = 0; j != D[180].length; ++j) if(D[180][j].charCodeAt(0) !== 0xFFFD) { e[D[180][j]] = 46080 + j; d[46080 + j] = D[180][j];}
+D[181] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������怠耽担丹单郸掸胆旦氮但惮淡诞弹蛋当挡党荡档刀捣蹈倒岛祷导到稻悼道盗德得的蹬灯登等瞪凳邓堤低滴迪敌笛狄涤翟嫡抵底地蒂第帝弟递缔颠掂滇碘点典靛垫电佃甸店惦奠淀殿碉叼雕凋刁掉吊钓调跌爹碟蝶迭谍叠�".split("");
+for(j = 0; j != D[181].length; ++j) if(D[181][j].charCodeAt(0) !== 0xFFFD) { e[D[181][j]] = 46336 + j; d[46336 + j] = D[181][j];}
+D[182] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������丁盯叮钉顶鼎锭定订丢东冬董懂动栋侗恫冻洞兜抖斗陡豆逗痘都督毒犊独读堵睹赌杜镀肚度渡妒端短锻段断缎堆兑队对墩吨蹲敦顿囤钝盾遁掇哆多夺垛躲朵跺舵剁惰堕蛾峨鹅俄额讹娥恶厄扼遏鄂饿恩而儿耳尔饵洱二�".split("");
+for(j = 0; j != D[182].length; ++j) if(D[182][j].charCodeAt(0) !== 0xFFFD) { e[D[182][j]] = 46592 + j; d[46592 + j] = D[182][j];}
+D[183] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������贰发罚筏伐乏阀法珐藩帆番翻樊矾钒繁凡烦反返范贩犯饭泛坊芳方肪房防妨仿访纺放菲非啡飞肥匪诽吠肺废沸费芬酚吩氛分纷坟焚汾粉奋份忿愤粪丰封枫蜂峰锋风疯烽逢冯缝讽奉凤佛否夫敷肤孵扶拂辐幅氟符伏俘服�".split("");
+for(j = 0; j != D[183].length; ++j) if(D[183][j].charCodeAt(0) !== 0xFFFD) { e[D[183][j]] = 46848 + j; d[46848 + j] = D[183][j];}
+D[184] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������浮涪福袱弗甫抚辅俯釜斧脯腑府腐赴副覆赋复傅付阜父腹负富讣附妇缚咐噶嘎该改概钙盖溉干甘杆柑竿肝赶感秆敢赣冈刚钢缸肛纲岗港杠篙皋高膏羔糕搞镐稿告哥歌搁戈鸽胳疙割革葛格蛤阁隔铬个各给根跟耕更庚羹�".split("");
+for(j = 0; j != D[184].length; ++j) if(D[184][j].charCodeAt(0) !== 0xFFFD) { e[D[184][j]] = 47104 + j; d[47104 + j] = D[184][j];}
+D[185] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������埂耿梗工攻功恭龚供躬公宫弓巩汞拱贡共钩勾沟苟狗垢构购够辜菇咕箍估沽孤姑鼓古蛊骨谷股故顾固雇刮瓜剐寡挂褂乖拐怪棺关官冠观管馆罐惯灌贯光广逛瑰规圭硅归龟闺轨鬼诡癸桂柜跪贵刽辊滚棍锅郭国果裹过哈�".split("");
+for(j = 0; j != D[185].length; ++j) if(D[185][j].charCodeAt(0) !== 0xFFFD) { e[D[185][j]] = 47360 + j; d[47360 + j] = D[185][j];}
+D[186] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������骸孩海氦亥害骇酣憨邯韩含涵寒函喊罕翰撼捍旱憾悍焊汗汉夯杭航壕嚎豪毫郝好耗号浩呵喝荷菏核禾和何合盒貉阂河涸赫褐鹤贺嘿黑痕很狠恨哼亨横衡恒轰哄烘虹鸿洪宏弘红喉侯猴吼厚候后呼乎忽瑚壶葫胡蝴狐糊湖�".split("");
+for(j = 0; j != D[186].length; ++j) if(D[186][j].charCodeAt(0) !== 0xFFFD) { e[D[186][j]] = 47616 + j; d[47616 + j] = D[186][j];}
+D[187] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������弧虎唬护互沪户花哗华猾滑画划化话槐徊怀淮坏欢环桓还缓换患唤痪豢焕涣宦幻荒慌黄磺蝗簧皇凰惶煌晃幌恍谎灰挥辉徽恢蛔回毁悔慧卉惠晦贿秽会烩汇讳诲绘荤昏婚魂浑混豁活伙火获或惑霍货祸击圾基机畸稽积箕�".split("");
+for(j = 0; j != D[187].length; ++j) if(D[187][j].charCodeAt(0) !== 0xFFFD) { e[D[187][j]] = 47872 + j; d[47872 + j] = D[187][j];}
+D[188] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������肌饥迹激讥鸡姬绩缉吉极棘辑籍集及急疾汲即嫉级挤几脊己蓟技冀季伎祭剂悸济寄寂计记既忌际妓继纪嘉枷夹佳家加荚颊贾甲钾假稼价架驾嫁歼监坚尖笺间煎兼肩艰奸缄茧检柬碱硷拣捡简俭剪减荐槛鉴践贱见键箭件�".split("");
+for(j = 0; j != D[188].length; ++j) if(D[188][j].charCodeAt(0) !== 0xFFFD) { e[D[188][j]] = 48128 + j; d[48128 + j] = D[188][j];}
+D[189] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������健舰剑饯渐溅涧建僵姜将浆江疆蒋桨奖讲匠酱降蕉椒礁焦胶交郊浇骄娇嚼搅铰矫侥脚狡角饺缴绞剿教酵轿较叫窖揭接皆秸街阶截劫节桔杰捷睫竭洁结解姐戒藉芥界借介疥诫届巾筋斤金今津襟紧锦仅谨进靳晋禁近烬浸�".split("");
+for(j = 0; j != D[189].length; ++j) if(D[189][j].charCodeAt(0) !== 0xFFFD) { e[D[189][j]] = 48384 + j; d[48384 + j] = D[189][j];}
+D[190] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������尽劲荆兢茎睛晶鲸京惊精粳经井警景颈静境敬镜径痉靖竟竞净炯窘揪究纠玖韭久灸九酒厩救旧臼舅咎就疚鞠拘狙疽居驹菊局咀矩举沮聚拒据巨具距踞锯俱句惧炬剧捐鹃娟倦眷卷绢撅攫抉掘倔爵觉决诀绝均菌钧军君峻�".split("");
+for(j = 0; j != D[190].length; ++j) if(D[190][j].charCodeAt(0) !== 0xFFFD) { e[D[190][j]] = 48640 + j; d[48640 + j] = D[190][j];}
+D[191] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������俊竣浚郡骏喀咖卡咯开揩楷凯慨刊堪勘坎砍看康慷糠扛抗亢炕考拷烤靠坷苛柯棵磕颗科壳咳可渴克刻客课肯啃垦恳坑吭空恐孔控抠口扣寇枯哭窟苦酷库裤夸垮挎跨胯块筷侩快宽款匡筐狂框矿眶旷况亏盔岿窥葵奎魁傀�".split("");
+for(j = 0; j != D[191].length; ++j) if(D[191][j].charCodeAt(0) !== 0xFFFD) { e[D[191][j]] = 48896 + j; d[48896 + j] = D[191][j];}
+D[192] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������馈愧溃坤昆捆困括扩廓阔垃拉喇蜡腊辣啦莱来赖蓝婪栏拦篮阑兰澜谰揽览懒缆烂滥琅榔狼廊郎朗浪捞劳牢老佬姥酪烙涝勒乐雷镭蕾磊累儡垒擂肋类泪棱楞冷厘梨犁黎篱狸离漓理李里鲤礼莉荔吏栗丽厉励砾历利傈例俐�".split("");
+for(j = 0; j != D[192].length; ++j) if(D[192][j].charCodeAt(0) !== 0xFFFD) { e[D[192][j]] = 49152 + j; d[49152 + j] = D[192][j];}
+D[193] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������痢立粒沥隶力璃哩俩联莲连镰廉怜涟帘敛脸链恋炼练粮凉梁粱良两辆量晾亮谅撩聊僚疗燎寥辽潦了撂镣廖料列裂烈劣猎琳林磷霖临邻鳞淋凛赁吝拎玲菱零龄铃伶羚凌灵陵岭领另令溜琉榴硫馏留刘瘤流柳六龙聋咙笼窿�".split("");
+for(j = 0; j != D[193].length; ++j) if(D[193][j].charCodeAt(0) !== 0xFFFD) { e[D[193][j]] = 49408 + j; d[49408 + j] = D[193][j];}
+D[194] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������隆垄拢陇楼娄搂篓漏陋芦卢颅庐炉掳卤虏鲁麓碌露路赂鹿潞禄录陆戮驴吕铝侣旅履屡缕虑氯律率滤绿峦挛孪滦卵乱掠略抡轮伦仑沦纶论萝螺罗逻锣箩骡裸落洛骆络妈麻玛码蚂马骂嘛吗埋买麦卖迈脉瞒馒蛮满蔓曼慢漫�".split("");
+for(j = 0; j != D[194].length; ++j) if(D[194][j].charCodeAt(0) !== 0xFFFD) { e[D[194][j]] = 49664 + j; d[49664 + j] = D[194][j];}
+D[195] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������谩芒茫盲氓忙莽猫茅锚毛矛铆卯茂冒帽貌贸么玫枚梅酶霉煤没眉媒镁每美昧寐妹媚门闷们萌蒙檬盟锰猛梦孟眯醚靡糜迷谜弥米秘觅泌蜜密幂棉眠绵冕免勉娩缅面苗描瞄藐秒渺庙妙蔑灭民抿皿敏悯闽明螟鸣铭名命谬摸�".split("");
+for(j = 0; j != D[195].length; ++j) if(D[195][j].charCodeAt(0) !== 0xFFFD) { e[D[195][j]] = 49920 + j; d[49920 + j] = D[195][j];}
+D[196] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������摹蘑模膜磨摩魔抹末莫墨默沫漠寞陌谋牟某拇牡亩姆母墓暮幕募慕木目睦牧穆拿哪呐钠那娜纳氖乃奶耐奈南男难囊挠脑恼闹淖呢馁内嫩能妮霓倪泥尼拟你匿腻逆溺蔫拈年碾撵捻念娘酿鸟尿捏聂孽啮镊镍涅您柠狞凝宁�".split("");
+for(j = 0; j != D[196].length; ++j) if(D[196][j].charCodeAt(0) !== 0xFFFD) { e[D[196][j]] = 50176 + j; d[50176 + j] = D[196][j];}
+D[197] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������拧泞牛扭钮纽脓浓农弄奴努怒女暖虐疟挪懦糯诺哦欧鸥殴藕呕偶沤啪趴爬帕怕琶拍排牌徘湃派攀潘盘磐盼畔判叛乓庞旁耪胖抛咆刨炮袍跑泡呸胚培裴赔陪配佩沛喷盆砰抨烹澎彭蓬棚硼篷膨朋鹏捧碰坯砒霹批披劈琵毗�".split("");
+for(j = 0; j != D[197].length; ++j) if(D[197][j].charCodeAt(0) !== 0xFFFD) { e[D[197][j]] = 50432 + j; d[50432 + j] = D[197][j];}
+D[198] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������啤脾疲皮匹痞僻屁譬篇偏片骗飘漂瓢票撇瞥拼频贫品聘乒坪苹萍平凭瓶评屏坡泼颇婆破魄迫粕剖扑铺仆莆葡菩蒲埔朴圃普浦谱曝瀑期欺栖戚妻七凄漆柒沏其棋奇歧畦崎脐齐旗祈祁骑起岂乞企启契砌器气迄弃汽泣讫掐�".split("");
+for(j = 0; j != D[198].length; ++j) if(D[198][j].charCodeAt(0) !== 0xFFFD) { e[D[198][j]] = 50688 + j; d[50688 + j] = D[198][j];}
+D[199] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������恰洽牵扦钎铅千迁签仟谦乾黔钱钳前潜遣浅谴堑嵌欠歉枪呛腔羌墙蔷强抢橇锹敲悄桥瞧乔侨巧鞘撬翘峭俏窍切茄且怯窃钦侵亲秦琴勤芹擒禽寝沁青轻氢倾卿清擎晴氰情顷请庆琼穷秋丘邱球求囚酋泅趋区蛆曲躯屈驱渠�".split("");
+for(j = 0; j != D[199].length; ++j) if(D[199][j].charCodeAt(0) !== 0xFFFD) { e[D[199][j]] = 50944 + j; d[50944 + j] = D[199][j];}
+D[200] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������取娶龋趣去圈颧权醛泉全痊拳犬券劝缺炔瘸却鹊榷确雀裙群然燃冉染瓤壤攘嚷让饶扰绕惹热壬仁人忍韧任认刃妊纫扔仍日戎茸蓉荣融熔溶容绒冗揉柔肉茹蠕儒孺如辱乳汝入褥软阮蕊瑞锐闰润若弱撒洒萨腮鳃塞赛三叁�".split("");
+for(j = 0; j != D[200].length; ++j) if(D[200][j].charCodeAt(0) !== 0xFFFD) { e[D[200][j]] = 51200 + j; d[51200 + j] = D[200][j];}
+D[201] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������伞散桑嗓丧搔骚扫嫂瑟色涩森僧莎砂杀刹沙纱傻啥煞筛晒珊苫杉山删煽衫闪陕擅赡膳善汕扇缮墒伤商赏晌上尚裳梢捎稍烧芍勺韶少哨邵绍奢赊蛇舌舍赦摄射慑涉社设砷申呻伸身深娠绅神沈审婶甚肾慎渗声生甥牲升绳�".split("");
+for(j = 0; j != D[201].length; ++j) if(D[201][j].charCodeAt(0) !== 0xFFFD) { e[D[201][j]] = 51456 + j; d[51456 + j] = D[201][j];}
+D[202] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������省盛剩胜圣师失狮施湿诗尸虱十石拾时什食蚀实识史矢使屎驶始式示士世柿事拭誓逝势是嗜噬适仕侍释饰氏市恃室视试收手首守寿授售受瘦兽蔬枢梳殊抒输叔舒淑疏书赎孰熟薯暑曙署蜀黍鼠属术述树束戍竖墅庶数漱�".split("");
+for(j = 0; j != D[202].length; ++j) if(D[202][j].charCodeAt(0) !== 0xFFFD) { e[D[202][j]] = 51712 + j; d[51712 + j] = D[202][j];}
+D[203] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������恕刷耍摔衰甩帅栓拴霜双爽谁水睡税吮瞬顺舜说硕朔烁斯撕嘶思私司丝死肆寺嗣四伺似饲巳松耸怂颂送宋讼诵搜艘擞嗽苏酥俗素速粟僳塑溯宿诉肃酸蒜算虽隋随绥髓碎岁穗遂隧祟孙损笋蓑梭唆缩琐索锁所塌他它她塔�".split("");
+for(j = 0; j != D[203].length; ++j) if(D[203][j].charCodeAt(0) !== 0xFFFD) { e[D[203][j]] = 51968 + j; d[51968 + j] = D[203][j];}
+D[204] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������獭挞蹋踏胎苔抬台泰酞太态汰坍摊贪瘫滩坛檀痰潭谭谈坦毯袒碳探叹炭汤塘搪堂棠膛唐糖倘躺淌趟烫掏涛滔绦萄桃逃淘陶讨套特藤腾疼誊梯剔踢锑提题蹄啼体替嚏惕涕剃屉天添填田甜恬舔腆挑条迢眺跳贴铁帖厅听烃�".split("");
+for(j = 0; j != D[204].length; ++j) if(D[204][j].charCodeAt(0) !== 0xFFFD) { e[D[204][j]] = 52224 + j; d[52224 + j] = D[204][j];}
+D[205] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������汀廷停亭庭挺艇通桐酮瞳同铜彤童桶捅筒统痛偷投头透凸秃突图徒途涂屠土吐兔湍团推颓腿蜕褪退吞屯臀拖托脱鸵陀驮驼椭妥拓唾挖哇蛙洼娃瓦袜歪外豌弯湾玩顽丸烷完碗挽晚皖惋宛婉万腕汪王亡枉网往旺望忘妄威�".split("");
+for(j = 0; j != D[205].length; ++j) if(D[205][j].charCodeAt(0) !== 0xFFFD) { e[D[205][j]] = 52480 + j; d[52480 + j] = D[205][j];}
+D[206] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������巍微危韦违桅围唯惟为潍维苇萎委伟伪尾纬未蔚味畏胃喂魏位渭谓尉慰卫瘟温蚊文闻纹吻稳紊问嗡翁瓮挝蜗涡窝我斡卧握沃巫呜钨乌污诬屋无芜梧吾吴毋武五捂午舞伍侮坞戊雾晤物勿务悟误昔熙析西硒矽晰嘻吸锡牺�".split("");
+for(j = 0; j != D[206].length; ++j) if(D[206][j].charCodeAt(0) !== 0xFFFD) { e[D[206][j]] = 52736 + j; d[52736 + j] = D[206][j];}
+D[207] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������稀息希悉膝夕惜熄烯溪汐犀檄袭席习媳喜铣洗系隙戏细瞎虾匣霞辖暇峡侠狭下厦夏吓掀锨先仙鲜纤咸贤衔舷闲涎弦嫌显险现献县腺馅羡宪陷限线相厢镶香箱襄湘乡翔祥详想响享项巷橡像向象萧硝霄削哮嚣销消宵淆晓�".split("");
+for(j = 0; j != D[207].length; ++j) if(D[207][j].charCodeAt(0) !== 0xFFFD) { e[D[207][j]] = 52992 + j; d[52992 + j] = D[207][j];}
+D[208] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������小孝校肖啸笑效楔些歇蝎鞋协挟携邪斜胁谐写械卸蟹懈泄泻谢屑薪芯锌欣辛新忻心信衅星腥猩惺兴刑型形邢行醒幸杏性姓兄凶胸匈汹雄熊休修羞朽嗅锈秀袖绣墟戌需虚嘘须徐许蓄酗叙旭序畜恤絮婿绪续轩喧宣悬旋玄�".split("");
+for(j = 0; j != D[208].length; ++j) if(D[208][j].charCodeAt(0) !== 0xFFFD) { e[D[208][j]] = 53248 + j; d[53248 + j] = D[208][j];}
+D[209] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������选癣眩绚靴薛学穴雪血勋熏循旬询寻驯巡殉汛训讯逊迅压押鸦鸭呀丫芽牙蚜崖衙涯雅哑亚讶焉咽阉烟淹盐严研蜒岩延言颜阎炎沿奄掩眼衍演艳堰燕厌砚雁唁彦焰宴谚验殃央鸯秧杨扬佯疡羊洋阳氧仰痒养样漾邀腰妖瑶�".split("");
+for(j = 0; j != D[209].length; ++j) if(D[209][j].charCodeAt(0) !== 0xFFFD) { e[D[209][j]] = 53504 + j; d[53504 + j] = D[209][j];}
+D[210] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������摇尧遥窑谣姚咬舀药要耀椰噎耶爷野冶也页掖业叶曳腋夜液一壹医揖铱依伊衣颐夷遗移仪胰疑沂宜姨彝椅蚁倚已乙矣以艺抑易邑屹亿役臆逸肄疫亦裔意毅忆义益溢诣议谊译异翼翌绎茵荫因殷音阴姻吟银淫寅饮尹引隐�".split("");
+for(j = 0; j != D[210].length; ++j) if(D[210][j].charCodeAt(0) !== 0xFFFD) { e[D[210][j]] = 53760 + j; d[53760 + j] = D[210][j];}
+D[211] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������印英樱婴鹰应缨莹萤营荧蝇迎赢盈影颖硬映哟拥佣臃痈庸雍踊蛹咏泳涌永恿勇用幽优悠忧尤由邮铀犹油游酉有友右佑釉诱又幼迂淤于盂榆虞愚舆余俞逾鱼愉渝渔隅予娱雨与屿禹宇语羽玉域芋郁吁遇喻峪御愈欲狱育誉�".split("");
+for(j = 0; j != D[211].length; ++j) if(D[211][j].charCodeAt(0) !== 0xFFFD) { e[D[211][j]] = 54016 + j; d[54016 + j] = D[211][j];}
+D[212] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������浴寓裕预豫驭鸳渊冤元垣袁原援辕园员圆猿源缘远苑愿怨院曰约越跃钥岳粤月悦阅耘云郧匀陨允运蕴酝晕韵孕匝砸杂栽哉灾宰载再在咱攒暂赞赃脏葬遭糟凿藻枣早澡蚤躁噪造皂灶燥责择则泽贼怎增憎曾赠扎喳渣札轧�".split("");
+for(j = 0; j != D[212].length; ++j) if(D[212][j].charCodeAt(0) !== 0xFFFD) { e[D[212][j]] = 54272 + j; d[54272 + j] = D[212][j];}
+D[213] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������铡闸眨栅榨咋乍炸诈摘斋宅窄债寨瞻毡詹粘沾盏斩辗崭展蘸栈占战站湛绽樟章彰漳张掌涨杖丈帐账仗胀瘴障招昭找沼赵照罩兆肇召遮折哲蛰辙者锗蔗这浙珍斟真甄砧臻贞针侦枕疹诊震振镇阵蒸挣睁征狰争怔整拯正政�".split("");
+for(j = 0; j != D[213].length; ++j) if(D[213][j].charCodeAt(0) !== 0xFFFD) { e[D[213][j]] = 54528 + j; d[54528 + j] = D[213][j];}
+D[214] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������帧症郑证芝枝支吱蜘知肢脂汁之织职直植殖执值侄址指止趾只旨纸志挚掷至致置帜峙制智秩稚质炙痔滞治窒中盅忠钟衷终种肿重仲众舟周州洲诌粥轴肘帚咒皱宙昼骤珠株蛛朱猪诸诛逐竹烛煮拄瞩嘱主著柱助蛀贮铸筑�".split("");
+for(j = 0; j != D[214].length; ++j) if(D[214][j].charCodeAt(0) !== 0xFFFD) { e[D[214][j]] = 54784 + j; d[54784 + j] = D[214][j];}
+D[215] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������住注祝驻抓爪拽专砖转撰赚篆桩庄装妆撞壮状椎锥追赘坠缀谆准捉拙卓桌琢茁酌啄着灼浊兹咨资姿滋淄孜紫仔籽滓子自渍字鬃棕踪宗综总纵邹走奏揍租足卒族祖诅阻组钻纂嘴醉最罪尊遵昨左佐柞做作坐座������".split("");
+for(j = 0; j != D[215].length; ++j) if(D[215][j].charCodeAt(0) !== 0xFFFD) { e[D[215][j]] = 55040 + j; d[55040 + j] = D[215][j];}
+D[216] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������亍丌兀丐廿卅丕亘丞鬲孬噩丨禺丿匕乇夭爻卮氐囟胤馗毓睾鼗丶亟鼐乜乩亓芈孛啬嘏仄厍厝厣厥厮靥赝匚叵匦匮匾赜卦卣刂刈刎刭刳刿剀剌剞剡剜蒯剽劂劁劐劓冂罔亻仃仉仂仨仡仫仞伛仳伢佤仵伥伧伉伫佞佧攸佚佝�".split("");
+for(j = 0; j != D[216].length; ++j) if(D[216][j].charCodeAt(0) !== 0xFFFD) { e[D[216][j]] = 55296 + j; d[55296 + j] = D[216][j];}
+D[217] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������佟佗伲伽佶佴侑侉侃侏佾佻侪佼侬侔俦俨俪俅俚俣俜俑俟俸倩偌俳倬倏倮倭俾倜倌倥倨偾偃偕偈偎偬偻傥傧傩傺僖儆僭僬僦僮儇儋仝氽佘佥俎龠汆籴兮巽黉馘冁夔勹匍訇匐凫夙兕亠兖亳衮袤亵脔裒禀嬴蠃羸冫冱冽冼�".split("");
+for(j = 0; j != D[217].length; ++j) if(D[217][j].charCodeAt(0) !== 0xFFFD) { e[D[217][j]] = 55552 + j; d[55552 + j] = D[217][j];}
+D[218] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������凇冖冢冥讠讦讧讪讴讵讷诂诃诋诏诎诒诓诔诖诘诙诜诟诠诤诨诩诮诰诳诶诹诼诿谀谂谄谇谌谏谑谒谔谕谖谙谛谘谝谟谠谡谥谧谪谫谮谯谲谳谵谶卩卺阝阢阡阱阪阽阼陂陉陔陟陧陬陲陴隈隍隗隰邗邛邝邙邬邡邴邳邶邺�".split("");
+for(j = 0; j != D[218].length; ++j) if(D[218][j].charCodeAt(0) !== 0xFFFD) { e[D[218][j]] = 55808 + j; d[55808 + j] = D[218][j];}
+D[219] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������邸邰郏郅邾郐郄郇郓郦郢郜郗郛郫郯郾鄄鄢鄞鄣鄱鄯鄹酃酆刍奂劢劬劭劾哿勐勖勰叟燮矍廴凵凼鬯厶弁畚巯坌垩垡塾墼壅壑圩圬圪圳圹圮圯坜圻坂坩垅坫垆坼坻坨坭坶坳垭垤垌垲埏垧垴垓垠埕埘埚埙埒垸埴埯埸埤埝�".split("");
+for(j = 0; j != D[219].length; ++j) if(D[219][j].charCodeAt(0) !== 0xFFFD) { e[D[219][j]] = 56064 + j; d[56064 + j] = D[219][j];}
+D[220] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������堋堍埽埭堀堞堙塄堠塥塬墁墉墚墀馨鼙懿艹艽艿芏芊芨芄芎芑芗芙芫芸芾芰苈苊苣芘芷芮苋苌苁芩芴芡芪芟苄苎芤苡茉苷苤茏茇苜苴苒苘茌苻苓茑茚茆茔茕苠苕茜荑荛荜茈莒茼茴茱莛荞茯荏荇荃荟荀茗荠茭茺茳荦荥�".split("");
+for(j = 0; j != D[220].length; ++j) if(D[220][j].charCodeAt(0) !== 0xFFFD) { e[D[220][j]] = 56320 + j; d[56320 + j] = D[220][j];}
+D[221] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������荨茛荩荬荪荭荮莰荸莳莴莠莪莓莜莅荼莶莩荽莸荻莘莞莨莺莼菁萁菥菘堇萘萋菝菽菖萜萸萑萆菔菟萏萃菸菹菪菅菀萦菰菡葜葑葚葙葳蒇蒈葺蒉葸萼葆葩葶蒌蒎萱葭蓁蓍蓐蓦蒽蓓蓊蒿蒺蓠蒡蒹蒴蒗蓥蓣蔌甍蔸蓰蔹蔟蔺�".split("");
+for(j = 0; j != D[221].length; ++j) if(D[221][j].charCodeAt(0) !== 0xFFFD) { e[D[221][j]] = 56576 + j; d[56576 + j] = D[221][j];}
+D[222] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������蕖蔻蓿蓼蕙蕈蕨蕤蕞蕺瞢蕃蕲蕻薤薨薇薏蕹薮薜薅薹薷薰藓藁藜藿蘧蘅蘩蘖蘼廾弈夼奁耷奕奚奘匏尢尥尬尴扌扪抟抻拊拚拗拮挢拶挹捋捃掭揶捱捺掎掴捭掬掊捩掮掼揲揸揠揿揄揞揎摒揆掾摅摁搋搛搠搌搦搡摞撄摭撖�".split("");
+for(j = 0; j != D[222].length; ++j) if(D[222][j].charCodeAt(0) !== 0xFFFD) { e[D[222][j]] = 56832 + j; d[56832 + j] = D[222][j];}
+D[223] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������摺撷撸撙撺擀擐擗擤擢攉攥攮弋忒甙弑卟叱叽叩叨叻吒吖吆呋呒呓呔呖呃吡呗呙吣吲咂咔呷呱呤咚咛咄呶呦咝哐咭哂咴哒咧咦哓哔呲咣哕咻咿哌哙哚哜咩咪咤哝哏哞唛哧唠哽唔哳唢唣唏唑唧唪啧喏喵啉啭啁啕唿啐唼�".split("");
+for(j = 0; j != D[223].length; ++j) if(D[223][j].charCodeAt(0) !== 0xFFFD) { e[D[223][j]] = 57088 + j; d[57088 + j] = D[223][j];}
+D[224] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������唷啖啵啶啷唳唰啜喋嗒喃喱喹喈喁喟啾嗖喑啻嗟喽喾喔喙嗪嗷嗉嘟嗑嗫嗬嗔嗦嗝嗄嗯嗥嗲嗳嗌嗍嗨嗵嗤辔嘞嘈嘌嘁嘤嘣嗾嘀嘧嘭噘嘹噗嘬噍噢噙噜噌噔嚆噤噱噫噻噼嚅嚓嚯囔囗囝囡囵囫囹囿圄圊圉圜帏帙帔帑帱帻帼�".split("");
+for(j = 0; j != D[224].length; ++j) if(D[224][j].charCodeAt(0) !== 0xFFFD) { e[D[224][j]] = 57344 + j; d[57344 + j] = D[224][j];}
+D[225] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������帷幄幔幛幞幡岌屺岍岐岖岈岘岙岑岚岜岵岢岽岬岫岱岣峁岷峄峒峤峋峥崂崃崧崦崮崤崞崆崛嵘崾崴崽嵬嵛嵯嵝嵫嵋嵊嵩嵴嶂嶙嶝豳嶷巅彳彷徂徇徉後徕徙徜徨徭徵徼衢彡犭犰犴犷犸狃狁狎狍狒狨狯狩狲狴狷猁狳猃狺�".split("");
+for(j = 0; j != D[225].length; ++j) if(D[225][j].charCodeAt(0) !== 0xFFFD) { e[D[225][j]] = 57600 + j; d[57600 + j] = D[225][j];}
+D[226] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������狻猗猓猡猊猞猝猕猢猹猥猬猸猱獐獍獗獠獬獯獾舛夥飧夤夂饣饧饨饩饪饫饬饴饷饽馀馄馇馊馍馐馑馓馔馕庀庑庋庖庥庠庹庵庾庳赓廒廑廛廨廪膺忄忉忖忏怃忮怄忡忤忾怅怆忪忭忸怙怵怦怛怏怍怩怫怊怿怡恸恹恻恺恂�".split("");
+for(j = 0; j != D[226].length; ++j) if(D[226][j].charCodeAt(0) !== 0xFFFD) { e[D[226][j]] = 57856 + j; d[57856 + j] = D[226][j];}
+D[227] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������恪恽悖悚悭悝悃悒悌悛惬悻悱惝惘惆惚悴愠愦愕愣惴愀愎愫慊慵憬憔憧憷懔懵忝隳闩闫闱闳闵闶闼闾阃阄阆阈阊阋阌阍阏阒阕阖阗阙阚丬爿戕氵汔汜汊沣沅沐沔沌汨汩汴汶沆沩泐泔沭泷泸泱泗沲泠泖泺泫泮沱泓泯泾�".split("");
+for(j = 0; j != D[227].length; ++j) if(D[227][j].charCodeAt(0) !== 0xFFFD) { e[D[227][j]] = 58112 + j; d[58112 + j] = D[227][j];}
+D[228] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������洹洧洌浃浈洇洄洙洎洫浍洮洵洚浏浒浔洳涑浯涞涠浞涓涔浜浠浼浣渚淇淅淞渎涿淠渑淦淝淙渖涫渌涮渫湮湎湫溲湟溆湓湔渲渥湄滟溱溘滠漭滢溥溧溽溻溷滗溴滏溏滂溟潢潆潇漤漕滹漯漶潋潴漪漉漩澉澍澌潸潲潼潺濑�".split("");
+for(j = 0; j != D[228].length; ++j) if(D[228][j].charCodeAt(0) !== 0xFFFD) { e[D[228][j]] = 58368 + j; d[58368 + j] = D[228][j];}
+D[229] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������濉澧澹澶濂濡濮濞濠濯瀚瀣瀛瀹瀵灏灞宀宄宕宓宥宸甯骞搴寤寮褰寰蹇謇辶迓迕迥迮迤迩迦迳迨逅逄逋逦逑逍逖逡逵逶逭逯遄遑遒遐遨遘遢遛暹遴遽邂邈邃邋彐彗彖彘尻咫屐屙孱屣屦羼弪弩弭艴弼鬻屮妁妃妍妩妪妣�".split("");
+for(j = 0; j != D[229].length; ++j) if(D[229][j].charCodeAt(0) !== 0xFFFD) { e[D[229][j]] = 58624 + j; d[58624 + j] = D[229][j];}
+D[230] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������妗姊妫妞妤姒妲妯姗妾娅娆姝娈姣姘姹娌娉娲娴娑娣娓婀婧婊婕娼婢婵胬媪媛婷婺媾嫫媲嫒嫔媸嫠嫣嫱嫖嫦嫘嫜嬉嬗嬖嬲嬷孀尕尜孚孥孳孑孓孢驵驷驸驺驿驽骀骁骅骈骊骐骒骓骖骘骛骜骝骟骠骢骣骥骧纟纡纣纥纨纩�".split("");
+for(j = 0; j != D[230].length; ++j) if(D[230][j].charCodeAt(0) !== 0xFFFD) { e[D[230][j]] = 58880 + j; d[58880 + j] = D[230][j];}
+D[231] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������纭纰纾绀绁绂绉绋绌绐绔绗绛绠绡绨绫绮绯绱绲缍绶绺绻绾缁缂缃缇缈缋缌缏缑缒缗缙缜缛缟缡缢缣缤缥缦缧缪缫缬缭缯缰缱缲缳缵幺畿巛甾邕玎玑玮玢玟珏珂珑玷玳珀珉珈珥珙顼琊珩珧珞玺珲琏琪瑛琦琥琨琰琮琬�".split("");
+for(j = 0; j != D[231].length; ++j) if(D[231][j].charCodeAt(0) !== 0xFFFD) { e[D[231][j]] = 59136 + j; d[59136 + j] = D[231][j];}
+D[232] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������琛琚瑁瑜瑗瑕瑙瑷瑭瑾璜璎璀璁璇璋璞璨璩璐璧瓒璺韪韫韬杌杓杞杈杩枥枇杪杳枘枧杵枨枞枭枋杷杼柰栉柘栊柩枰栌柙枵柚枳柝栀柃枸柢栎柁柽栲栳桠桡桎桢桄桤梃栝桕桦桁桧桀栾桊桉栩梵梏桴桷梓桫棂楮棼椟椠棹�".split("");
+for(j = 0; j != D[232].length; ++j) if(D[232][j].charCodeAt(0) !== 0xFFFD) { e[D[232][j]] = 59392 + j; d[59392 + j] = D[232][j];}
+D[233] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������椤棰椋椁楗棣椐楱椹楠楂楝榄楫榀榘楸椴槌榇榈槎榉楦楣楹榛榧榻榫榭槔榱槁槊槟榕槠榍槿樯槭樗樘橥槲橄樾檠橐橛樵檎橹樽樨橘橼檑檐檩檗檫猷獒殁殂殇殄殒殓殍殚殛殡殪轫轭轱轲轳轵轶轸轷轹轺轼轾辁辂辄辇辋�".split("");
+for(j = 0; j != D[233].length; ++j) if(D[233][j].charCodeAt(0) !== 0xFFFD) { e[D[233][j]] = 59648 + j; d[59648 + j] = D[233][j];}
+D[234] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������辍辎辏辘辚軎戋戗戛戟戢戡戥戤戬臧瓯瓴瓿甏甑甓攴旮旯旰昊昙杲昃昕昀炅曷昝昴昱昶昵耆晟晔晁晏晖晡晗晷暄暌暧暝暾曛曜曦曩贲贳贶贻贽赀赅赆赈赉赇赍赕赙觇觊觋觌觎觏觐觑牮犟牝牦牯牾牿犄犋犍犏犒挈挲掰�".split("");
+for(j = 0; j != D[234].length; ++j) if(D[234][j].charCodeAt(0) !== 0xFFFD) { e[D[234][j]] = 59904 + j; d[59904 + j] = D[234][j];}
+D[235] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������搿擘耄毪毳毽毵毹氅氇氆氍氕氘氙氚氡氩氤氪氲攵敕敫牍牒牖爰虢刖肟肜肓肼朊肽肱肫肭肴肷胧胨胩胪胛胂胄胙胍胗朐胝胫胱胴胭脍脎胲胼朕脒豚脶脞脬脘脲腈腌腓腴腙腚腱腠腩腼腽腭腧塍媵膈膂膑滕膣膪臌朦臊膻�".split("");
+for(j = 0; j != D[235].length; ++j) if(D[235][j].charCodeAt(0) !== 0xFFFD) { e[D[235][j]] = 60160 + j; d[60160 + j] = D[235][j];}
+D[236] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������臁膦欤欷欹歃歆歙飑飒飓飕飙飚殳彀毂觳斐齑斓於旆旄旃旌旎旒旖炀炜炖炝炻烀炷炫炱烨烊焐焓焖焯焱煳煜煨煅煲煊煸煺熘熳熵熨熠燠燔燧燹爝爨灬焘煦熹戾戽扃扈扉礻祀祆祉祛祜祓祚祢祗祠祯祧祺禅禊禚禧禳忑忐�".split("");
+for(j = 0; j != D[236].length; ++j) if(D[236][j].charCodeAt(0) !== 0xFFFD) { e[D[236][j]] = 60416 + j; d[60416 + j] = D[236][j];}
+D[237] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������怼恝恚恧恁恙恣悫愆愍慝憩憝懋懑戆肀聿沓泶淼矶矸砀砉砗砘砑斫砭砜砝砹砺砻砟砼砥砬砣砩硎硭硖硗砦硐硇硌硪碛碓碚碇碜碡碣碲碹碥磔磙磉磬磲礅磴礓礤礞礴龛黹黻黼盱眄眍盹眇眈眚眢眙眭眦眵眸睐睑睇睃睚睨�".split("");
+for(j = 0; j != D[237].length; ++j) if(D[237][j].charCodeAt(0) !== 0xFFFD) { e[D[237][j]] = 60672 + j; d[60672 + j] = D[237][j];}
+D[238] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������睢睥睿瞍睽瞀瞌瞑瞟瞠瞰瞵瞽町畀畎畋畈畛畲畹疃罘罡罟詈罨罴罱罹羁罾盍盥蠲钅钆钇钋钊钌钍钏钐钔钗钕钚钛钜钣钤钫钪钭钬钯钰钲钴钶钷钸钹钺钼钽钿铄铈铉铊铋铌铍铎铐铑铒铕铖铗铙铘铛铞铟铠铢铤铥铧铨铪�".split("");
+for(j = 0; j != D[238].length; ++j) if(D[238][j].charCodeAt(0) !== 0xFFFD) { e[D[238][j]] = 60928 + j; d[60928 + j] = D[238][j];}
+D[239] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������铩铫铮铯铳铴铵铷铹铼铽铿锃锂锆锇锉锊锍锎锏锒锓锔锕锖锘锛锝锞锟锢锪锫锩锬锱锲锴锶锷锸锼锾锿镂锵镄镅镆镉镌镎镏镒镓镔镖镗镘镙镛镞镟镝镡镢镤镥镦镧镨镩镪镫镬镯镱镲镳锺矧矬雉秕秭秣秫稆嵇稃稂稞稔�".split("");
+for(j = 0; j != D[239].length; ++j) if(D[239][j].charCodeAt(0) !== 0xFFFD) { e[D[239][j]] = 61184 + j; d[61184 + j] = D[239][j];}
+D[240] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������稹稷穑黏馥穰皈皎皓皙皤瓞瓠甬鸠鸢鸨鸩鸪鸫鸬鸲鸱鸶鸸鸷鸹鸺鸾鹁鹂鹄鹆鹇鹈鹉鹋鹌鹎鹑鹕鹗鹚鹛鹜鹞鹣鹦鹧鹨鹩鹪鹫鹬鹱鹭鹳疒疔疖疠疝疬疣疳疴疸痄疱疰痃痂痖痍痣痨痦痤痫痧瘃痱痼痿瘐瘀瘅瘌瘗瘊瘥瘘瘕瘙�".split("");
+for(j = 0; j != D[240].length; ++j) if(D[240][j].charCodeAt(0) !== 0xFFFD) { e[D[240][j]] = 61440 + j; d[61440 + j] = D[240][j];}
+D[241] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������瘛瘼瘢瘠癀瘭瘰瘿瘵癃瘾瘳癍癞癔癜癖癫癯翊竦穸穹窀窆窈窕窦窠窬窨窭窳衤衩衲衽衿袂袢裆袷袼裉裢裎裣裥裱褚裼裨裾裰褡褙褓褛褊褴褫褶襁襦襻疋胥皲皴矜耒耔耖耜耠耢耥耦耧耩耨耱耋耵聃聆聍聒聩聱覃顸颀颃�".split("");
+for(j = 0; j != D[241].length; ++j) if(D[241][j].charCodeAt(0) !== 0xFFFD) { e[D[241][j]] = 61696 + j; d[61696 + j] = D[241][j];}
+D[242] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������颉颌颍颏颔颚颛颞颟颡颢颥颦虍虔虬虮虿虺虼虻蚨蚍蚋蚬蚝蚧蚣蚪蚓蚩蚶蛄蚵蛎蚰蚺蚱蚯蛉蛏蚴蛩蛱蛲蛭蛳蛐蜓蛞蛴蛟蛘蛑蜃蜇蛸蜈蜊蜍蜉蜣蜻蜞蜥蜮蜚蜾蝈蜴蜱蜩蜷蜿螂蜢蝽蝾蝻蝠蝰蝌蝮螋蝓蝣蝼蝤蝙蝥螓螯螨蟒�".split("");
+for(j = 0; j != D[242].length; ++j) if(D[242][j].charCodeAt(0) !== 0xFFFD) { e[D[242][j]] = 61952 + j; d[61952 + j] = D[242][j];}
+D[243] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������蟆螈螅螭螗螃螫蟥螬螵螳蟋蟓螽蟑蟀蟊蟛蟪蟠蟮蠖蠓蟾蠊蠛蠡蠹蠼缶罂罄罅舐竺竽笈笃笄笕笊笫笏筇笸笪笙笮笱笠笥笤笳笾笞筘筚筅筵筌筝筠筮筻筢筲筱箐箦箧箸箬箝箨箅箪箜箢箫箴篑篁篌篝篚篥篦篪簌篾篼簏簖簋�".split("");
+for(j = 0; j != D[243].length; ++j) if(D[243][j].charCodeAt(0) !== 0xFFFD) { e[D[243][j]] = 62208 + j; d[62208 + j] = D[243][j];}
+D[244] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������簟簪簦簸籁籀臾舁舂舄臬衄舡舢舣舭舯舨舫舸舻舳舴舾艄艉艋艏艚艟艨衾袅袈裘裟襞羝羟羧羯羰羲籼敉粑粝粜粞粢粲粼粽糁糇糌糍糈糅糗糨艮暨羿翎翕翥翡翦翩翮翳糸絷綦綮繇纛麸麴赳趄趔趑趱赧赭豇豉酊酐酎酏酤�".split("");
+for(j = 0; j != D[244].length; ++j) if(D[244][j].charCodeAt(0) !== 0xFFFD) { e[D[244][j]] = 62464 + j; d[62464 + j] = D[244][j];}
+D[245] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������酢酡酰酩酯酽酾酲酴酹醌醅醐醍醑醢醣醪醭醮醯醵醴醺豕鹾趸跫踅蹙蹩趵趿趼趺跄跖跗跚跞跎跏跛跆跬跷跸跣跹跻跤踉跽踔踝踟踬踮踣踯踺蹀踹踵踽踱蹉蹁蹂蹑蹒蹊蹰蹶蹼蹯蹴躅躏躔躐躜躞豸貂貊貅貘貔斛觖觞觚觜�".split("");
+for(j = 0; j != D[245].length; ++j) if(D[245][j].charCodeAt(0) !== 0xFFFD) { e[D[245][j]] = 62720 + j; d[62720 + j] = D[245][j];}
+D[246] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������觥觫觯訾謦靓雩雳雯霆霁霈霏霎霪霭霰霾龀龃龅龆龇龈龉龊龌黾鼋鼍隹隼隽雎雒瞿雠銎銮鋈錾鍪鏊鎏鐾鑫鱿鲂鲅鲆鲇鲈稣鲋鲎鲐鲑鲒鲔鲕鲚鲛鲞鲟鲠鲡鲢鲣鲥鲦鲧鲨鲩鲫鲭鲮鲰鲱鲲鲳鲴鲵鲶鲷鲺鲻鲼鲽鳄鳅鳆鳇鳊鳋�".split("");
+for(j = 0; j != D[246].length; ++j) if(D[246][j].charCodeAt(0) !== 0xFFFD) { e[D[246][j]] = 62976 + j; d[62976 + j] = D[246][j];}
+D[247] = "�����������������������������������������������������������������������������������������������������������������������������������������������������������������鳌鳍鳎鳏鳐鳓鳔鳕鳗鳘鳙鳜鳝鳟鳢靼鞅鞑鞒鞔鞯鞫鞣鞲鞴骱骰骷鹘骶骺骼髁髀髅髂髋髌髑魅魃魇魉魈魍魑飨餍餮饕饔髟髡髦髯髫髻髭髹鬈鬏鬓鬟鬣麽麾縻麂麇麈麋麒鏖麝麟黛黜黝黠黟黢黩黧黥黪黯鼢鼬鼯鼹鼷鼽鼾齄�".split("");
+for(j = 0; j != D[247].length; ++j) if(D[247][j].charCodeAt(0) !== 0xFFFD) { e[D[247][j]] = 63232 + j; d[63232 + j] = D[247][j];}
+return {"enc": e, "dec": d }; })();
 cptable[10029] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÄĀāÉĄÖÜáąČäčĆćéŹźĎíďĒēĖóėôöõúĚěü†°Ę£§•¶ß®©™ę¨≠ģĮįĪ≤≥īĶ∂∑łĻļĽľĹĺŅņŃ¬√ńŇ∆«»… ňŐÕőŌ–—“”‘’÷◊ōŔŕŘ‹›řŖŗŠ‚„šŚśÁŤťÍŽžŪÓÔūŮÚůŰűŲųÝýķŻŁżĢˇ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[10079] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûüÝ°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄¤ÐðÞþý·‚„‰ÂÊÁËÈÍÎÏÌÓÔ�ÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
 cptable[10081] = (function(){ var d = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷◊ÿŸĞğİıŞş‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ�ÒÚÛÙ�ˆ˜¯˘˙˚¸˝˛ˇ", D = [], e = {}; for(var i=0;i!=d.length;++i) { if(d.charCodeAt(i) !== 0xFFFD) e[d.charAt(i)] = i; D[i] = d.charAt(i); } return {"enc": e, "dec": D }; })();
@@ -6873,7 +7024,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = cptable;
 }));
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":14}],21:[function(require,module,exports){
+},{"buffer":16}],23:[function(require,module,exports){
 (function (global,Buffer){
 /*!
 
@@ -15865,7 +16016,7 @@ module.exports = ZStream;
 }));
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"buffer":14}],22:[function(require,module,exports){
+},{"buffer":16}],24:[function(require,module,exports){
 (function (process,global,Buffer){
 /* xlsx.js (C) 2013-present SheetJS -- http://sheetjs.com */
 /* vim: set ts=2: */
@@ -15875,7 +16026,7 @@ module.exports = ZStream;
 /*global global, exports, module, require:false, process:false, Buffer:false */
 var XLSX = {};
 (function make_xlsx(XLSX){
-XLSX.version = '0.10.3';
+XLSX.version = '0.10.7';
 var current_codepage = 1200;
 /*global cptable:true */
 if(typeof module !== "undefined" && typeof require !== 'undefined') {
@@ -15885,10 +16036,22 @@ function reset_cp() { set_cp(1200); }
 var set_cp = function(cp) { current_codepage = cp; };
 
 function char_codes(data) { var o = []; for(var i = 0, len = data.length; i < len; ++i) o[i] = data.charCodeAt(i); return o; }
+
+function utf16leread(data) {
+	var o = [];
+	for(var i = 0; i < (data.length>>1); ++i) o[i] = String.fromCharCode(data.charCodeAt(2*i) + (data.charCodeAt(2*i+1)<<8));
+	return o.join("");
+}
+function utf16beread(data) {
+	var o = [];
+	for(var i = 0; i < (data.length>>1); ++i) o[i] = String.fromCharCode(data.charCodeAt(2*i+1) + (data.charCodeAt(2*i)<<8));
+	return o.join("");
+}
+
 var debom = function(data) {
 	var c1 = data.charCodeAt(0), c2 = data.charCodeAt(1);
-	if(c1 == 0xFF && c2 == 0xFE) return data.substr(2);
-	if(c1 == 0xFE && c2 == 0xFF) return data.substr(2);
+	if(c1 == 0xFF && c2 == 0xFE) return utf16leread(data.substr(2));
+	if(c1 == 0xFE && c2 == 0xFF) return utf16beread(data.substr(2));
 	if(c1 == 0xFEFF) return data.substr(1);
 	return data;
 };
@@ -15968,7 +16131,7 @@ var chr0 = /\u0000/g, chr1 = /[\u0001-\u0006]/;
 /*jshint -W041 */
 var SSF = {};
 var make_ssf = function make_ssf(SSF){
-SSF.version = '0.9.3';
+SSF.version = '0.9.4';
 function _strrev(x) { var o = "", i = x.length-1; while(i>=0) o += x.charAt(i--); return o; }
 function fill(c,l) { var o = ""; while(o.length < l) o+=c; return o; }
 function pad0(v,d){var t=""+v; return t.length>=d?t:fill('0',d-t.length)+t;}
@@ -16264,7 +16427,7 @@ function write_num_f1(r, aval, sign) {
 function write_num_f2(r, aval, sign) {
 	return sign + (aval === 0 ? "" : ""+aval) + fill(" ", r[1].length + 2 + r[4].length);
 }
-var dec1 = /^#*0*\.(0+)/;
+var dec1 = /^#*0*\.([0#]+)/;
 var closeparen = /\).*[0#]/;
 var phone = /\(###\) ###\\?-####/;
 function hashq(str) {
@@ -16311,7 +16474,7 @@ function write_num_flt(type, fmt, val) {
 	if((r = fmt.match(frac1))) return write_num_f1(r, aval, sign);
 	if(fmt.match(/^#+0+$/)) return sign + pad0r(aval,fmt.length - fmt.indexOf("0"));
 	if((r = fmt.match(dec1))) {
-		o = rnd(val, r[1].length).replace(/^([^\.]+)$/,"$1."+r[1]).replace(/\.$/,"."+r[1]).replace(/\.(\d*)$/,function($$, $1) { return "." + $1 + fill("0", r[1].length-$1.length); });
+		o = rnd(val, r[1].length).replace(/^([^\.]+)$/,"$1."+hashq(r[1])).replace(/\.$/,"."+hashq(r[1])).replace(/\.(\d*)$/,function($$, $1) { return "." + $1 + fill("0", hashq(r[1]).length-$1.length); });
 		return fmt.indexOf("0.") !== -1 ? o : o.replace(/^0\./,".");
 	}
 	fmt = fmt.replace(/^#+([0.])/, "$1");
@@ -16427,9 +16590,9 @@ function write_num_int(type, fmt, val) {
 	if((r = fmt.match(frac1))) return write_num_f2(r, aval, sign);
 	if(fmt.match(/^#+0+$/)) return sign + pad0(aval,fmt.length - fmt.indexOf("0"));
 	if((r = fmt.match(dec1))) {
-o = (""+val).replace(/^([^\.]+)$/,"$1."+r[1]).replace(/\.$/,"."+r[1]);
+o = (""+val).replace(/^([^\.]+)$/,"$1."+hashq(r[1])).replace(/\.$/,"."+hashq(r[1]));
 		o = o.replace(/\.(\d*)$/,function($$, $1) {
-return "." + $1 + fill("0", r[1].length-$1.length); });
+return "." + $1 + fill("0", hashq(r[1]).length-$1.length); });
 		return fmt.indexOf("0.") !== -1 ? o : o.replace(/^0\./,".");
 	}
 	fmt = fmt.replace(/^#+([0.])/, "$1");
@@ -16527,9 +16690,9 @@ function fmt_is_date(fmt) {
 			case 'M': case 'D': case 'Y': case 'H': case 'S': case 'E':
 				/* falls through */
 			case 'm': case 'd': case 'y': case 'h': case 's': case 'e': case 'g': return true;
-			case 'A':
-				if(fmt.substr(i, 3) === "A/P") return true;
-				if(fmt.substr(i, 5) === "AM/PM") return true;
+			case 'A': case 'a':
+				if(fmt.substr(i, 3).toUpperCase() === "A/P") return true;
+				if(fmt.substr(i, 5).toUpperCase() === "AM/PM") return true;
 				++i; break;
 			case '[':
 				o = c;
@@ -16586,11 +16749,11 @@ function eval_fmt(fmt, v, opts, flen) {
 				if(c === 'm' && lst.toLowerCase() === 'h') c = 'M';
 				if(c === 'h') c = hr;
 				out[out.length] = {t:c, v:o}; lst = c; break;
-			case 'A':
-				q={t:c, v:"A"};
+			case 'A': case 'a':
+				q={t:c, v:c};
 				if(dt==null) dt=parse_date_code(v, opts);
-				if(fmt.substr(i, 3) === "A/P") { if(dt!=null) q.v = dt.H >= 12 ? "P" : "A"; q.t = 'T'; hr='h';i+=3;}
-				else if(fmt.substr(i,5) === "AM/PM") { if(dt!=null) q.v = dt.H >= 12 ? "PM" : "AM"; q.t = 'T'; i+=5; hr='h'; }
+				if(fmt.substr(i, 3).toUpperCase() === "A/P") { if(dt!=null) q.v = dt.H >= 12 ? "P" : "A"; q.t = 'T'; hr='h';i+=3;}
+				else if(fmt.substr(i,5).toUpperCase() === "AM/PM") { if(dt!=null) q.v = dt.H >= 12 ? "PM" : "AM"; q.t = 'T'; i+=5; hr='h'; }
 				else { q.t = "t"; ++i; }
 				if(dt==null && q.t === 'T') return "";
 				out[out.length] = q; lst = c; break;
@@ -16627,7 +16790,7 @@ function eval_fmt(fmt, v, opts, flen) {
 				out[out.length] = {t:'D', v:o}; break;
 			case ' ': out[out.length] = {t:c, v:c}; ++i; break;
 			default:
-				if(",$-+/():!^&'~{}<>=€acfijklopqrtuvwxz".indexOf(c) === -1) throw new Error('unrecognized character ' + c + ' in ' + fmt);
+				if(",$-+/():!^&'~{}<>=€acfijklopqrtuvwxzP".indexOf(c) === -1) throw new Error('unrecognized character ' + c + ' in ' + fmt);
 				out[out.length] = {t:'t', v:c}; ++i; break;
 		}
 	}
@@ -16835,6 +16998,33 @@ var XLMLFormatMap/*{[string]:string}*/ = ({
 	"True/False": '"True";"True";"False";@',
 	"On/Off": '"Yes";"Yes";"No";@'
 });
+
+/* dateNF parse TODO: move to SSF */
+var dateNFregex = /[dD]+|[mM]+|[yYeE]+|[Hh]+|[Ss]+/g;
+function dateNF_regex(dateNF) {
+	var fmt = typeof dateNF == "number" ? SSF._table[dateNF] : dateNF;
+	fmt = fmt.replace(dateNFregex, "(\\d+)");
+	return new RegExp("^" + fmt + "$");
+}
+function dateNF_fix(str, dateNF, match) {
+	var Y = -1, m = -1, d = -1, H = -1, M = -1, S = -1;
+	(dateNF.match(dateNFregex)||[]).forEach(function(n, i) {
+		var v = parseInt(match[i+1], 10);
+		switch(n.toLowerCase().charAt(0)) {
+			case 'y': Y = v; break; case 'd': d = v; break;
+			case 'h': H = v; break; case 's': S = v; break;
+			case 'm': if(H >= 0) M = v; else m = v; break;
+		}
+	});
+	if(S >= 0 && M == -1 && m >= 0) { M = m; m = -1; }
+	var datestr = (("" + (Y>=0?Y: new Date().getFullYear())).slice(-4) + "-" + ("00" + (m>=1?m:1)).slice(-2) + "-" + ("00" + (d>=1?d:1)).slice(-2));
+	if(datestr.length == 7) datestr = "0" + datestr;
+	if(datestr.length == 8) datestr = "20" + datestr;
+	var timestr = (("00" + (H>=0?H:0)).slice(-2) + ":" + ("00" + (M>=0?M:0)).slice(-2) + ":" + ("00" + (S>=0?S:0)).slice(-2));
+	if(H == -1 && M == -1 && S == -1) return datestr;
+	if(Y == -1 && m == -1 && d == -1) return timestr;
+	return datestr + "T" + timestr;
+}
 
 var DO_NOT_EXPORT_CFB = true;
 /* cfb.js (C) 2013-present SheetJS -- http://sheetjs.com */
@@ -17254,22 +17444,17 @@ function evert_arr(obj) {
 	return o;
 }
 
+var basedate = new Date(1899, 11, 30, 0, 0, 0); // 2209161600000
+var dnthresh = basedate.getTime() + (new Date().getTimezoneOffset() - basedate.getTimezoneOffset()) * 60000;
 function datenum(v, date1904) {
 	var epoch = v.getTime();
 	if(date1904) epoch += 1462*24*60*60*1000;
-	return (epoch + 2209161600000) / (24 * 60 * 60 * 1000);
+	return (epoch - dnthresh) / (24 * 60 * 60 * 1000);
 }
 function numdate(v) {
-	var date = SSF.parse_date_code(v);
-	var val = new Date();
-	if(date == null) throw new Error("Bad Date Code: " + v);
-	val.setUTCDate(date.d);
-	val.setUTCMonth(date.m-1);
-	val.setUTCFullYear(date.y);
-	val.setUTCHours(date.H);
-	val.setUTCMinutes(date.M);
-	val.setUTCSeconds(date.S);
-	return val;
+	var out = new Date();
+	out.setTime(v * 24 * 60 * 60 * 1000 + dnthresh);
+	return out;
 }
 
 /* ISO 8601 Duration */
@@ -17302,9 +17487,14 @@ function parse_isodur(s) {
 var good_pd_date = new Date('2017-02-19T19:06:09.000Z');
 if(isNaN(good_pd_date.getFullYear())) good_pd_date = new Date('2/19/17');
 var good_pd = good_pd_date.getFullYear() == 2017;
-function parseDate(str) {
+/* parses aa date as a local date */
+function parseDate(str, fixdate) {
 	var d = new Date(str);
-	if(good_pd) return d;
+	if(good_pd) {
+if(fixdate > 0) d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000);
+		else if(fixdate < 0) d.setTime(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
+		return d;
+	}
 	if(str instanceof Date) return str;
 	if(good_pd_date.getFullYear() == 1917 && !isNaN(d.getFullYear())) {
 		var s = d.getFullYear();
@@ -17312,7 +17502,7 @@ function parseDate(str) {
 		d.setFullYear(d.getFullYear() + 100); return d;
 	}
 	var n = str.match(/\d+/g)||["2017","2","19","0","0","0"];
-	return new Date(Date.UTC(+n[0], +n[1] - 1, +n[2], (+n[3]||0), (+n[4]||0), (+n[5]||0)));
+	return new Date(+n[0], +n[1] - 1, +n[2], (+n[3]||0), (+n[4]||0), (+n[5]||0));
 }
 
 function cc2str(arr) {
@@ -17499,7 +17689,7 @@ var xlml_unfixstr = (function() {
 
 function parsexmlbool(value, tag) {
 	switch(value) {
-		case '1': case 'true': case 'TRUE': return true;
+		case 1: case true: case '1': case 'true': case 'TRUE': return true;
 		/* case '0': case 'false': case 'FALSE':*/
 		default: return false;
 	}
@@ -17553,16 +17743,16 @@ var matchtag = (function() {
 	return function matchtag(f,g) {
 		var t = f+"|"+(g||"");
 		if(mtcache[t]) return mtcache[t];
-		return (mtcache[t] = new RegExp('<(?:\\w+:)?'+f+'(?: xml:space="preserve")?(?:[^>]*)>([^\u2603]*)</(?:\\w+:)?'+f+'>',((g||""))));
+		return (mtcache[t] = new RegExp('<(?:\\w+:)?'+f+'(?: xml:space="preserve")?(?:[^>]*)>([\\s\\S]*?)</(?:\\w+:)?'+f+'>',((g||""))));
 	};
 })();
 
 var vtregex = (function(){ var vt_cache = {};
 	return function vt_regex(bt) {
 		if(vt_cache[bt] !== undefined) return vt_cache[bt];
-		return (vt_cache[bt] = new RegExp("<(?:vt:)?" + bt + ">(.*?)</(?:vt:)?" + bt + ">", 'g') );
+		return (vt_cache[bt] = new RegExp("<(?:vt:)?" + bt + ">([\\s\\S]*?)</(?:vt:)?" + bt + ">", 'g') );
 };})();
-var vtvregex = /<\/?(?:vt:)?variant>/g, vtmregex = /<(?:vt:)([^>]*)>(.*)</;
+var vtvregex = /<\/?(?:vt:)?variant>/g, vtmregex = /<(?:vt:)([^>]*)>([\s\S]*)</;
 function parseVector(data) {
 	var h = parsexmltag(data);
 
@@ -18221,7 +18411,7 @@ function write_RkNumber(data, o) {
 
 
 /* [MS-XLSB] 2.5.117 RfX */
-function parse_RfX(data) {
+function parse_RfX(data ) {
 	var cell = ({s: {}, e: {}});
 	cell.s.r = data.read_shift(4);
 	cell.e.r = data.read_shift(4);
@@ -19084,7 +19274,7 @@ var CORE_PROPS_REGEX = (function() {
 	for(var i = 0; i < CORE_PROPS.length; ++i) {
 		var f = CORE_PROPS[i];
 		var g = "(?:"+ f[0].substr(0,f[0].indexOf(":")) +":)"+ f[0].substr(f[0].indexOf(":")+1);
-		r[i] = new RegExp("<" + g + "[^>]*>(.*)<\/" + g + ">");
+		r[i] = new RegExp("<" + g + "[^>]*>([\\s\\S]*?)<\/" + g + ">");
 	}
 	return r;
 })();
@@ -19164,7 +19354,7 @@ function parse_ext_props(data, p) {
 			case "string": p[f[1]] = (data.match(matchtag(f[0]))||[])[1]; break;
 			case "bool": p[f[1]] = (data.match(matchtag(f[0]))||[])[1] === "true"; break;
 			case "raw":
-				var cur = data.match(new RegExp("<" + f[0] + "[^>]*>(.*)<\/" + f[0] + ">"));
+				var cur = data.match(new RegExp("<" + f[0] + "[^>]*>([\\s\\S]*?)<\/" + f[0] + ">"));
 				if(cur && cur.length > 0) q[f[1]] = cur[1];
 				break;
 		}
@@ -19188,6 +19378,7 @@ function parse_ext_props(data, p) {
 				case "Fogli di lavoro":
 				case "Folhas de cálculo":
 				case "Planilhas":
+				case "Regneark":
 				case "Werkbladen":
 					p.Worksheets = len;
 					p.SheetNames = parts.slice(idx, idx + len);
@@ -19195,6 +19386,7 @@ function parse_ext_props(data, p) {
 
 				case "Named Ranges":
 				case "Benannte Bereiche":
+				case "Navngivne områder":
 					p.NamedRanges = len;
 					p.DefinedNames = parts.slice(idx, idx + len);
 					break;
@@ -19522,7 +19714,7 @@ function parse_TypedPropertyValue(blob, type, _opts) {
 		case 0x41 /*VT_BLOB*/: return parse_BLOB(blob);
 		case 0x47 /*VT_CF*/: return parse_ClipboardData(blob);
 		case 0x50 /*VT_STRING*/: return parse_VtString(blob, t, !opts.raw && 4).replace(chr0,'');
-		case 0x51 /*VT_USTR*/: return parse_VtUnalignedString(blob, t, 4).replace(chr0,'');
+		case 0x51 /*VT_USTR*/: return parse_VtUnalignedString(blob, t/*, 4*/).replace(chr0,'');
 		case 0x100C /*VT_VECTOR|VT_VARIANT*/: return parse_VtVecHeadingPair(blob);
 		case 0x101E /*VT_LPSTR*/: return parse_VtVecUnalignedLpstr(blob);
 		default: throw new Error("TypedPropertyValue unrecognized type " + type + " " + t);
@@ -19758,7 +19950,7 @@ function parse_XLUnicodeString2(blob, length, opts) {
 var parse_ControlInfo = parsenoop;
 
 /* [MS-OSHARED] 2.3.7.6 URLMoniker TODO: flags */
-var parse_URLMoniker = function(blob/*, length, opts*/) {
+var parse_URLMoniker = function(blob) {
 	var len = blob.read_shift(4), start = blob.l;
 	var extra = false;
 	if(len > 24) {
@@ -20275,10 +20467,11 @@ function parse_SupBook(blob, length, opts) {
 	var end = blob.l + length;
 	var ctab = blob.read_shift(2);
 	var cch = blob.read_shift(2);
-	var virtPath;
-	if(cch >=0x01 && cch <=0xff) virtPath = parse_XLUnicodeStringNoCch(blob, cch);
-	var rgst = blob.read_shift(end - blob.l);
 	opts.sbcch = cch;
+	if(cch == 0x0401 || cch == 0x3A01) return [cch, ctab];
+	if(cch < 0x01 || cch >0xff) throw new Error("Unexpected SupBook type: "+cch);
+	var virtPath = parse_XLUnicodeStringNoCch(blob, cch);
+	var rgst = blob.read_shift(end - blob.l);
 	return [cch, ctab, virtPath, rgst];
 }
 
@@ -20303,6 +20496,22 @@ function parse_ExternName(blob, length, opts) {
 }
 
 /* 2.4.150 TODO */
+var XLSLblBuiltIn = [
+	"_xlnm.Consolidate_Area",
+	"_xlnm.Auto_Open",
+	"_xlnm.Auto_Close",
+	"_xlnm.Extract",
+	"_xlnm.Database",
+	"_xlnm.Criteria",
+	"_xlnm.Print_Area",
+	"_xlnm.Print_Titles",
+	"_xlnm.Recorder",
+	"_xlnm.Data_Form",
+	"_xlnm.Auto_Activate",
+	"_xlnm.Auto_Deactivate",
+	"_xlnm.Sheet_Title",
+	"_xlnm._FilterDatabase"
+];
 function parse_Lbl(blob, length, opts) {
 	var target = blob.l + length;
 	var flags = blob.read_shift(2);
@@ -20316,6 +20525,7 @@ function parse_Lbl(blob, length, opts) {
 		blob.l += 4;
 	}
 	var name = parse_XLUnicodeStringNoCch(blob, cch, opts);
+	if(flags & 0x20) name = XLSLblBuiltIn[name.charCodeAt(0)];
 	var npflen = target - blob.l; if(opts && opts.biff == 2) --npflen;
 	var rgce = target == blob.l || cce == 0 ? [] : parse_NameParsedFormula(blob, npflen, opts, cce);
 	return {
@@ -21243,15 +21453,15 @@ var SYLK = (function() {
 		return [arr, sht];
 	}
 
-	function sylk_to_sheet(str, opts) {
-		var aoasht = sylk_to_aoa(str, opts);
+	function sylk_to_sheet(d, opts) {
+		var aoasht = sylk_to_aoa(d, opts);
 		var aoa = aoasht[0], ws = aoasht[1];
 		var o = aoa_to_sheet(aoa, opts);
 		keys(ws).forEach(function(k) { o[k] = ws[k]; });
 		return o;
 	}
 
-	function sylk_to_workbook(str, opts) { return sheet_to_workbook(sylk_to_sheet(str, opts), opts); }
+	function sylk_to_workbook(d, opts) { return sheet_to_workbook(sylk_to_sheet(d, opts), opts); }
 
 	function write_ws_cell_sylk(cell, ws, R, C, opts) {
 		var o = "C;Y" + (R+1) + ";X" + (C+1) + ";K";
@@ -21474,6 +21684,7 @@ var PRN = (function() {
 		var R = 0, C = 0, v = 0;
 		var start = 0, end = 0, sepcc = sep.charCodeAt(0), instr = false, cc=0;
 		str = str.replace(/\r\n/mg, "\n");
+		var _re = o.dateNF != null ? dateNF_regex(o.dateNF) : null;
 		function finish_cell() {
 			var s = str.slice(start, end);
 			var cell = ({});
@@ -21481,10 +21692,12 @@ var PRN = (function() {
 			else if(s == "TRUE") { cell.t = 'b'; cell.v = true; }
 			else if(s == "FALSE") { cell.t = 'b'; cell.v = false; }
 			else if(!isNaN(v = +s)) { cell.t = 'n'; cell.w = s; cell.v = v; }
-			else if(!isNaN(fuzzydate(s).getDate())) {
+			else if(!isNaN(fuzzydate(s).getDate()) || _re && s.match(_re)) {
 				cell.z = o.dateNF || SSF._table[14];
-				if(o.cellDates) { cell.t = 'd'; cell.v = parseDate(s); }
-				else { cell.t = 'n'; cell.v = datenum(parseDate(s)); }
+				var k = 0;
+				if(_re && s.match(_re)){ s=dateNF_fix(s, o.dateNF, (s.match(_re)||[])); k=1; }
+				if(o.cellDates) { cell.t = 'd'; cell.v = parseDate(s, k); }
+				else { cell.t = 'n'; cell.v = datenum(parseDate(s, k)); }
 				cell.w = SSF.format(cell.z, cell.v instanceof Date ? datenum(cell.v):cell.v);
 			} else {
 				cell.t = 's';
@@ -21528,7 +21741,7 @@ var PRN = (function() {
 		return prn_to_sheet_str(str, opts);
 	}
 
-	function prn_to_workbook(str, opts) { return sheet_to_workbook(prn_to_sheet(str, opts), opts); }
+	function prn_to_workbook(d, opts) { return sheet_to_workbook(prn_to_sheet(d, opts), opts); }
 
 	function sheet_to_prn(ws, opts) {
 		var o = [];
@@ -22062,7 +22275,7 @@ var parse_rs = (function parse_rs_factory() {
 
 /* 18.4.8 si CT_Rst */
 var sitregex = /<(?:\w+:)?t[^>]*>([^<]*)<\/(?:\w+:)?t>/g, sirregex = /<(?:\w+:)?r>/;
-var sirphregex = /<(?:\w+:)?rPh.*?>(.*?)<\/(?:\w+:)?rPh>/g;
+var sirphregex = /<(?:\w+:)?rPh.*?>([\s\S]*?)<\/(?:\w+:)?rPh>/g;
 function parse_si(x, opts) {
 	var html = opts ? opts.cellHTML : true;
 	var z = {};
@@ -22545,8 +22758,8 @@ function char2width_(chr) { return (((chr * MDW + 5)/MDW*256))/256; }
 function cycle_width(collw) { return char2width(px2char(width2px(collw))); }
 /* XLSX/XLSB/XLS specify width in units of MDW */
 function find_mdw_colw(collw) {
-	var delta = Infinity, _MDW = MIN_MDW;
-	for(MDW=MIN_MDW; MDW<MAX_MDW; ++MDW) if(Math.abs(collw - cycle_width(collw)) <= delta) { delta = Math.abs(collw - cycle_width(collw)); _MDW = MDW; }
+	var delta = Math.abs(collw - cycle_width(collw)), _MDW = MDW;
+	if(delta > 0.005) for(MDW=MIN_MDW; MDW<MAX_MDW; ++MDW) if(Math.abs(collw - cycle_width(collw)) <= delta) { delta = Math.abs(collw - cycle_width(collw)); _MDW = MDW; }
 	MDW = _MDW;
 }
 /* XLML specifies width in terms of pixels */
@@ -22620,44 +22833,48 @@ function parse_borders(t, styles, themes, opts) {
 			case '</border>': break;
 
 			/* note: not in spec, appears to be CT_BorderPr */
-			case '<left': case '<left/>': break;
+			case '<left/>': break;
+			case '<left': case '<left>': break;
 			case '</left>': break;
 
 			/* note: not in spec, appears to be CT_BorderPr */
-			case '<right': case '<right/>': break;
+			case '<right/>': break;
+			case '<right': case '<right>': break;
 			case '</right>': break;
 
 			/* 18.8.43 top CT_BorderPr */
-			case '<top': case '<top/>': break;
+			case '<top/>': break;
+			case '<top': case '<top>': break;
 			case '</top>': break;
 
 			/* 18.8.6 bottom CT_BorderPr */
-			case '<bottom': case '<bottom/>': break;
+			case '<bottom/>': break;
+			case '<bottom': case '<bottom>': break;
 			case '</bottom>': break;
 
 			/* 18.8.13 diagonal CT_BorderPr */
-			case '<diagonal': case '<diagonal/>': break;
+			case '<diagonal': case '<diagonal>': case '<diagonal/>': break;
 			case '</diagonal>': break;
 
 			/* 18.8.25 horizontal CT_BorderPr */
-			case '<horizontal': case '<horizontal/>': break;
+			case '<horizontal': case '<horizontal>': case '<horizontal/>': break;
 			case '</horizontal>': break;
 
 			/* 18.8.44 vertical CT_BorderPr */
-			case '<vertical': case '<vertical/>': break;
+			case '<vertical': case '<vertical>': case '<vertical/>': break;
 			case '</vertical>': break;
 
 			/* 18.8.37 start CT_BorderPr */
-			case '<start': case '<start/>': break;
+			case '<start': case '<start>': case '<start/>': break;
 			case '</start>': break;
 
 			/* 18.8.16 end CT_BorderPr */
-			case '<end': case '<end/>': break;
+			case '<end': case '<end>': case '<end/>': break;
 			case '</end>': break;
 
 			/* 18.8.? color CT_Color */
-			case '<color': case '<color/>': break;
-			case '</color>': break;
+			case '<color': case '<color>': break;
+			case '<color/>': case '</color>': break;
 
 			default: if(opts && opts.WTF) throw new Error('unrecognized ' + y[0] + ' in borders');
 		}
@@ -22674,7 +22891,7 @@ function parse_fills(t, styles, themes, opts) {
 			case '<fills': case '<fills>': case '</fills>': break;
 
 			/* 18.8.20 fill CT_Fill */
-			case '<fill>': break;
+			case '<fill>': case '<fill': break;
 			case '</fill>': styles.Fills.push(fill); fill = {}; break;
 
 			/* 18.8.24 gradientFill CT_GradientFill */
@@ -22807,7 +23024,7 @@ function parse_fonts(t, styles, themes, opts) {
 				if(!font.color) font.color = {};
 				if(y.auto) font.color.auto = parsexmlbool(y.auto);
 
-				if(y.rgb) font.color.rgb = y.rgb;
+				if(y.rgb) font.color.rgb = y.rgb.slice(-6);
 				else if(y.indexed) {
 					font.color.index = parseInt(y.indexed, 10);
 					var icv = XLSIcv[font.color.index];
@@ -22843,7 +23060,14 @@ function parse_numFmts(t, styles, opts) {
 			case '<numFmts': case '</numFmts>': case '<numFmts/>': case '<numFmts>': break;
 			case '<numFmt': {
 				var f=unescapexml(utf8read(y.formatCode)), j=parseInt(y.numFmtId,10);
-				styles.NumberFmt[j] = f; if(j>0) SSF.load(f,j);
+				styles.NumberFmt[j] = f;
+				if(j>0) {
+					if(j > 0x188) {
+						for(j = 0x188; j > 0x3c; --j) if(styles.NumberFmt[j] == null) break;
+						styles.NumberFmt[j] = f;
+					}
+					SSF.load(f,j);
+				}
 			} break;
 			case '</numFmt>': break;
 			default: if(opts.WTF) throw new Error('unrecognized ' + y[0] + ' in numFmts');
@@ -22863,20 +23087,27 @@ function write_numFmts(NF, opts) {
 }
 
 /* 18.8.10 cellXfs CT_CellXfs */
+var cellXF_uint = [ "numFmtId", "fillId", "fontId", "borderId", "xfId" ];
+var cellXF_bool = [ "applyAlignment", "applyBorder", "applyFill", "applyFont", "applyNumberFormat", "applyProtection", "pivotButton", "quotePrefix" ];
 function parse_cellXfs(t, styles, opts) {
 	styles.CellXf = [];
 	var xf;
 	t[0].match(tagregex).forEach(function(x) {
-		var y = parsexmltag(x);
+		var y = parsexmltag(x), i = 0;
 		switch(y[0]) {
 			case '<cellXfs': case '<cellXfs>': case '<cellXfs/>': case '</cellXfs>': break;
 
 			/* 18.8.45 xf CT_Xf */
-			case '<xf':
+			case '<xf': case '<xf/>':
 				xf = y;
 				delete xf[0];
-				if(xf.numFmtId) xf.numFmtId = parseInt(xf.numFmtId, 10);
-				if(xf.fillId) xf.fillId = parseInt(xf.fillId, 10);
+				for(i = 0; i < cellXF_uint.length; ++i) if(xf[cellXF_uint[i]])
+					xf[cellXF_uint[i]] = parseInt(xf[cellXF_uint[i]], 10);
+				for(i = 0; i < cellXF_bool.length; ++i) if(xf[cellXF_bool[i]])
+					xf[cellXF_bool[i]] = parsexmlbool(xf[cellXF_bool[i]], "");
+				if(xf.numFmtId > 0x188) {
+					for(i = 0x188; i > 0x3c; --i) if(styles.NumberFmt[xf.numFmtId] == styles.NumberFmt[i]) { xf.numFmtId = i; break; }
+				}
 				styles.CellXf.push(xf); break;
 			case '</xf>': break;
 
@@ -22915,15 +23146,16 @@ function write_cellXfs(cellXfs) {
 
 /* 18.8 Styles CT_Stylesheet*/
 var parse_sty_xml= (function make_pstyx() {
-var numFmtRegex = /<numFmts([^>]*)>.*<\/numFmts>/;
-var cellXfRegex = /<cellXfs([^>]*)>.*<\/cellXfs>/;
-var fillsRegex = /<fills([^>]*)>.*<\/fills>/;
-var fontsRegex = /<fonts([^>]*)>.*<\/fonts>/;
-var bordersRegex = /<borders([^>]*)>.*<\/borders>/;
+var numFmtRegex = /<numFmts([^>]*)>[\S\s]*?<\/numFmts>/;
+var cellXfRegex = /<cellXfs([^>]*)>[\S\s]*?<\/cellXfs>/;
+var fillsRegex = /<fills([^>]*)>[\S\s]*?<\/fills>/;
+var fontsRegex = /<fonts([^>]*)>[\S\s]*?<\/fonts>/;
+var bordersRegex = /<borders([^>]*)>[\S\s]*?<\/borders>/;
 
 return function parse_sty_xml(data, themes, opts) {
 	var styles = {};
 	if(!data) return styles;
+	data = data.replace(/<!--([\s\S]*?)-->/mg,"").replace(/<!DOCTYPE[^\[]*\[[^\]]*\]>/gm,"");
 	/* 18.8.39 styleSheet CT_Stylesheet */
 	var t;
 
@@ -23237,13 +23469,13 @@ function parse_sty_bin(data, themes, opts) {
 function write_FMTS_bin(ba, NF) {
 	if(!NF) return;
 	var cnt = 0;
-	[[5,8],[23,26],[41,44],[/*63*/57,/*66],[164,*/392]].forEach(function(r) {
+	[[5,8],[23,26],[41,44],[/*63*/50,/*66],[164,*/392]].forEach(function(r) {
 for(var i = r[0]; i <= r[1]; ++i) if(NF[i] != null) ++cnt;
 	});
 
 	if(cnt == 0) return;
 	write_record(ba, "BrtBeginFmts", write_UInt32LE(cnt));
-	[[5,8],[23,26],[41,44],[/*63*/57,/*66],[164,*/392]].forEach(function(r) {
+	[[5,8],[23,26],[41,44],[/*63*/50,/*66],[164,*/392]].forEach(function(r) {
 for(var i = r[0]; i <= r[1]; ++i) if(NF[i] != null) write_record(ba, "BrtFmt", write_BrtFmt(i, NF[i]));
 	});
 	write_record(ba, "BrtEndFmts");
@@ -23421,9 +23653,9 @@ function parse_fontScheme(t, themes, opts) { }
 /* 20.1.4.1.15 fmtScheme CT_StyleMatrix */
 function parse_fmtScheme(t, themes, opts) { }
 
-var clrsregex = /<a:clrScheme([^>]*)>[^\u2603]*<\/a:clrScheme>/;
-var fntsregex = /<a:fontScheme([^>]*)>[^\u2603]*<\/a:fontScheme>/;
-var fmtsregex = /<a:fmtScheme([^>]*)>[^\u2603]*<\/a:fmtScheme>/;
+var clrsregex = /<a:clrScheme([^>]*)>[\s\S]*<\/a:clrScheme>/;
+var fntsregex = /<a:fontScheme([^>]*)>[\s\S]*<\/a:fontScheme>/;
+var fmtsregex = /<a:fmtScheme([^>]*)>[\s\S]*<\/a:fmtScheme>/;
 
 /* 20.1.6.10 themeElements CT_BaseStyles */
 function parse_themeElements(data, themes, opts) {
@@ -23444,7 +23676,7 @@ function parse_themeElements(data, themes, opts) {
 	});
 }
 
-var themeltregex = /<a:themeElements([^>]*)>[^\u2603]*<\/a:themeElements>/;
+var themeltregex = /<a:themeElements([^>]*)>[\s\S]*<\/a:themeElements>/;
 
 /* 14.2.7 Theme Part */
 function parse_theme_xml(data, opts) {
@@ -23887,13 +24119,13 @@ function parse_comments_xml(data, opts) {
 	if(data.match(/<(?:\w+:)?comments *\/>/)) return [];
 	var authors = [];
 	var commentList = [];
-	var authtag = data.match(/<(?:\w+:)?authors>([^\u2603]*)<\/(?:\w+:)?authors>/);
+	var authtag = data.match(/<(?:\w+:)?authors>([\s\S]*)<\/(?:\w+:)?authors>/);
 	if(authtag && authtag[1]) authtag[1].split(/<\/\w*:?author>/).forEach(function(x) {
 		if(x === "" || x.trim() === "") return;
 		var a = x.match(/<(?:\w+:)?author[^>]*>(.*)/);
 		if(a) authors.push(a[1]);
 	});
-	var cmnttag = data.match(/<(?:\w+:)?commentList>([^\u2603]*)<\/(?:\w+:)?commentList>/);
+	var cmnttag = data.match(/<(?:\w+:)?commentList>([\s\S]*)<\/(?:\w+:)?commentList>/);
 	if(cmnttag && cmnttag[1]) cmnttag[1].split(/<\/\w*:?comment>/).forEach(function(x, index) {
 		if(x === "" || x.trim() === "") return;
 		var cm = x.match(/<(?:\w+:)?comment[^>]*>/);
@@ -23902,7 +24134,7 @@ function parse_comments_xml(data, opts) {
 		var comment = ({ author: y.authorId && authors[y.authorId] ? authors[y.authorId] : "sheetjsghost", ref: y.ref, guid: y.guid });
 		var cell = decode_cell(y.ref);
 		if(opts.sheetRows && opts.sheetRows <= cell.r) return;
-		var textMatch = x.match(/<(?:\w+:)?text>([^\u2603]*)<\/(?:\w+:)?text>/);
+		var textMatch = x.match(/<(?:\w+:)?text>([\s\S]*)<\/(?:\w+:)?text>/);
 		var rt = !!textMatch && !!textMatch[1] && parse_si(textMatch[1]) || {r:"",t:"",h:""};
 		comment.r = rt.r;
 		if(rt.r == "<t></t>") rt.t = rt.h = "";
@@ -24040,10 +24272,10 @@ RELS.DS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/d
 RELS.MS = "http://schemas.microsoft.com/office/2006/relationships/xlMacrosheet";
 
 /* macro and dialog sheet stubs */
-function parse_ds_bin() { return {'!type':'dialog'}; }
-function parse_ds_xml() { return {'!type':'dialog'}; }
-function parse_ms_bin() { return {'!type':'macro'}; }
-function parse_ms_xml() { return {'!type':'macro'}; }
+function parse_ds_bin(data, opts, rels, wb, themes, styles) { return {'!type':'dialog'}; }
+function parse_ds_xml(data, opts, rels, wb, themes, styles) { return {'!type':'dialog'}; }
+function parse_ms_bin(data, opts, rels, wb, themes, styles) { return {'!type':'macro'}; }
+function parse_ms_xml(data, opts, rels, wb, themes, styles) { return {'!type':'macro'}; }
 /* TODO: it will be useful to parse the function str */
 var rc_to_a1 = (function(){
 	var rcregex = /(^|[^A-Za-z])R(\[?)(-?\d+|)\]?C(\[?)(-?\d+|)\]?/g;
@@ -24113,7 +24345,7 @@ function parse_RgceArea(blob, length, opts) {
 	return { s:{r:r, c:c[0], cRel:c[1], rRel:c[2]}, e:{r:R, c:C[0], cRel:C[1], rRel:C[2]} };
 }
 /* BIFF 2-5 encodes flags in the row field */
-function parse_RgceArea_BIFF2(blob/*, length, opts*/) {
+function parse_RgceArea_BIFF2(blob) {
 	var r=parse_ColRelU(blob, 2), R=parse_ColRelU(blob, 2);
 	var c=blob.read_shift(1);
 	var C=blob.read_shift(1);
@@ -24121,7 +24353,7 @@ function parse_RgceArea_BIFF2(blob/*, length, opts*/) {
 }
 
 /* 2.5.198.105 TODO */
-function parse_RgceAreaRel(blob, length/*, opts*/) {
+function parse_RgceAreaRel(blob, length) {
 	var r=blob.read_shift(length == 12 ? 4 : 2), R=blob.read_shift(length == 12 ? 4 : 2);
 	var c=parse_ColRelU(blob, 2);
 	var C=parse_ColRelU(blob, 2);
@@ -26462,11 +26694,11 @@ function parse_ws_xml_dim(ws, s) {
 	if(d.s.r<=d.e.r && d.s.c<=d.e.c && d.s.r>=0 && d.s.c>=0) ws["!ref"] = encode_range(d);
 }
 var mergecregex = /<(?:\w:)?mergeCell ref="[A-Z0-9:]+"\s*[\/]?>/g;
-var sheetdataregex = /<(?:\w+:)?sheetData>([^\u2603]*)<\/(?:\w+:)?sheetData>/;
+var sheetdataregex = /<(?:\w+:)?sheetData>([\s\S]*)<\/(?:\w+:)?sheetData>/;
 var hlinkregex = /<(?:\w:)?hyperlink [^>]*>/mg;
 var dimregex = /"(\w*:\w*)"/;
 var colregex = /<(?:\w:)?col[^>]*[\/]?>/g;
-var afregex = /<(?:\w:)?autoFilter[^>]*([\/]|>([^\u2603]*)<\/(?:\w:)?autoFilter)>/g;
+var afregex = /<(?:\w:)?autoFilter[^>]*([\/]|>([\s\S]*)<\/(?:\w:)?autoFilter)>/g;
 var marginregex= /<(?:\w:)?pageMargins[^>]*\/>/g;
 /* 18.3 Worksheets */
 function parse_ws_xml(data, opts, rels, wb, themes, styles) {
@@ -26478,7 +26710,7 @@ function parse_ws_xml(data, opts, rels, wb, themes, styles) {
 	var refguess = ({s: {r:2000000, c:2000000}, e: {r:0, c:0} });
 
 	var data1 = "", data2 = "";
-	var mtch =data.match(sheetdataregex);
+	var mtch = data.match(sheetdataregex);
 	if(mtch) {
 		data1 = data.substr(0, mtch.index);
 		data2 = data.substr(mtch.index + mtch[0].length);
@@ -26534,8 +26766,8 @@ function parse_ws_xml(data, opts, rels, wb, themes, styles) {
 			s["!ref"] = encode_range(tmpref);
 		}
 	}
-	if(mergecells.length > 0) s["!merges"] = mergecells;
 	if(columns.length > 0) s["!cols"] = columns;
+	if(mergecells.length > 0) s["!merges"] = mergecells;
 	return s;
 }
 
@@ -26567,7 +26799,7 @@ function write_ws_xml_protection(sp) {
 function parse_ws_xml_hlinks(s, data, rels) {
 	var dense = Array.isArray(s);
 	for(var i = 0; i != data.length; ++i) {
-		var val = parsexmltag(data[i], true);
+		var val = parsexmltag(utf8read(data[i]), true);
 		if(!val.ref) return;
 		var rel = rels ? rels['!id'][val.id] : null;
 		if(rel) {
@@ -26653,7 +26885,7 @@ function write_ws_xml_cell(cell, ref, ws, opts, idx, wb) {
 		case 'n': vv = ''+cell.v; break;
 		case 'e': vv = BErr[cell.v]; break;
 		case 'd':
-			if(opts.cellDates) vv = parseDate(cell.v).toISOString();
+			if(opts.cellDates) vv = parseDate(cell.v, -1).toISOString();
 			else {
 				cell.t = 'n';
 				vv = ''+(cell.v = datenum(parseDate(cell.v)));
@@ -26698,7 +26930,8 @@ return function parse_ws_xml_data(sdata, s, opts, guess, themes, styles) {
 	var ri = 0, x = "", cells = [], cref = [], idx=0, i=0, cc=0, d="", p;
 	var tag, tagr = 0, tagc = 0;
 	var sstr, ftag;
-	var fmtid = 0, fillid = 0, do_format = Array.isArray(styles.CellXf), cf;
+	var fmtid = 0, fillid = 0;
+	var do_format = Array.isArray(styles.CellXf), cf;
 	var arrayf = [];
 	var sharedf = [];
 	var dense = Array.isArray(s);
@@ -26785,14 +27018,15 @@ return function parse_ws_xml_data(sdata, s, opts, guess, themes, styles) {
 					p.v = parseFloat(p.v);
 					break;
 				case 's':
-					sstr = strs[parseInt(p.v, 10)];
 					if(typeof p.v == 'undefined') {
 						if(!opts.sheetStubs) continue;
 						p.t = 'z';
+					} else {
+						sstr = strs[parseInt(p.v, 10)];
+						p.v = sstr.t;
+						p.r = sstr.r;
+						if(opts.cellHTML) p.h = sstr.h;
 					}
-					p.v = sstr.t;
-					p.r = sstr.r;
-					if(opts.cellHTML) p.h = sstr.h;
 					break;
 				case 'str':
 					p.t = "s";
@@ -26806,7 +27040,8 @@ return function parse_ws_xml_data(sdata, s, opts, guess, themes, styles) {
 					break;
 				case 'b': p.v = parsexmlbool(p.v); break;
 				case 'd':
-					if(!opts.cellDates) { p.v = datenum(parseDate(p.v)); p.t = 'n'; }
+					if(opts.cellDates) p.v = parseDate(p.v, 1);
+					else { p.v = datenum(parseDate(p.v, 1)); p.t = 'n'; }
 					break;
 				/* error string in .w, number in .v */
 				case 'e':
@@ -26823,9 +27058,7 @@ return function parse_ws_xml_data(sdata, s, opts, guess, themes, styles) {
 				}
 			}
 			safe_format(p, fmtid, fillid, opts, themes, styles);
-			if(opts.cellDates && do_format && p.t == 'n' && SSF.is_date(SSF._table[fmtid])) {
-				var _d = SSF.parse_date_code(p.v); if(_d) { p.t = 'd'; p.v = new Date(Date.UTC(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u)); }
-			}
+			if(opts.cellDates && do_format && p.t == 'n' && SSF.is_date(SSF._table[fmtid])) { p.t = 'd'; p.v = numdate(p.v); }
 			if(dense) {
 				var _r = decode_cell(tag.r);
 				if(!s[_r.r]) s[_r.r] = [];
@@ -27441,7 +27674,7 @@ function parse_ws_bin(data, _opts, rels, wb, themes, styles) {
 				if(refguess.e.r < row.r) refguess.e.r = row.r;
 				if(refguess.e.c < C) refguess.e.c = C;
 				if(opts.cellDates && cf && p.t == 'n' && SSF.is_date(SSF._table[cf.ifmt])) {
-					var _d = SSF.parse_date_code(p.v); if(_d) { p.t = 'd'; p.v = new Date(Date.UTC(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u)); }
+					var _d = SSF.parse_date_code(p.v); if(_d) { p.t = 'd'; p.v = new Date(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u); }
 				}
 				break;
 
@@ -27800,7 +28033,7 @@ function parse_numCache(data) {
 	});
 
 	/* 21.2.2.71 formatCode CT_Xstring */
-	var nf = unescapexml((data.match(/<c:formatCode>(.*?)<\/c:formatCode>/) || ["","General"])[1]);
+	var nf = unescapexml((data.match(/<c:formatCode>([\s\S]*?)<\/c:formatCode>/) || ["","General"])[1]);
 
 	return [col, nf];
 }
@@ -27815,7 +28048,7 @@ function parse_chart(data, name, opts, rels, wb, csheet) {
 	var refguess = {s: {r:2000000, c:2000000}, e: {r:0, c:0} };
 
 	/* 21.2.2.120 numCache CT_NumData */
-	(data.match(/<c:numCache>.*?<\/c:numCache>/gm)||[]).forEach(function(nc) {
+	(data.match(/<c:numCache>[\s\S]*?<\/c:numCache>/gm)||[]).forEach(function(nc) {
 		var cache = parse_numCache(nc);
 		refguess.s.r = refguess.s.c = 0;
 		refguess.e.c = C;
@@ -27923,38 +28156,37 @@ function write_cs_bin(idx, opts, wb, rels) {
 }
 /* 18.2.28 (CT_WorkbookProtection) Defaults */
 var WBPropsDef = [
-	['allowRefreshQuery', '0'],
-	['autoCompressPictures', '1'],
-	['backupFile', '0'],
-	['checkCompatibility', '0'],
-	['codeName', ''],
-	['date1904', '0'],
-	['dateCompatibility', '1'],
-	//['defaultThemeVersion', '0'],
-	['filterPrivacy', '0'],
-	['hidePivotFieldList', '0'],
-	['promptedSolutions', '0'],
-	['publishItems', '0'],
-	['refreshAllConnections', false],
-	['saveExternalLinkValues', '1'],
-	['showBorderUnselectedTables', '1'],
-	['showInkAnnotation', '1'],
-	['showObjects', 'all'],
-	['showPivotChartFilter', '0']
-	//['updateLinks', 'userSet']
+	['allowRefreshQuery',           false, "bool"],
+	['autoCompressPictures',        true,  "bool"],
+	['backupFile',                  false, "bool"],
+	['checkCompatibility',          false, "bool"],
+	['codeName',                    ''],
+	['date1904',                    false, "bool"],
+	['defaultThemeVersion',         0,      "int"],
+	['filterPrivacy',               false, "bool"],
+	['hidePivotFieldList',          false, "bool"],
+	['promptedSolutions',           false, "bool"],
+	['publishItems',                false, "bool"],
+	['refreshAllConnections',       false, "bool"],
+	['saveExternalLinkValues',      true,  "bool"],
+	['showBorderUnselectedTables',  true,  "bool"],
+	['showInkAnnotation',           true,  "bool"],
+	['showObjects',                 'all'],
+	['showPivotChartFilter',        false, "bool"],
+	['updateLinks', 'userSet']
 ];
 
 /* 18.2.30 (CT_BookView) Defaults */
 var WBViewDef = [
-	['activeTab', '0'],
-	['autoFilterDateGrouping', '1'],
-	['firstSheet', '0'],
-	['minimized', '0'],
-	['showHorizontalScroll', '1'],
-	['showSheetTabs', '1'],
-	['showVerticalScroll', '1'],
-	['tabRatio', '600'],
-	['visibility', 'visible']
+	['activeTab',                   0,      "int"],
+	['autoFilterDateGrouping',      true,  "bool"],
+	['firstSheet',                  0,      "int"],
+	['minimized',                   false, "bool"],
+	['showHorizontalScroll',        true,  "bool"],
+	['showSheetTabs',               true,  "bool"],
+	['showVerticalScroll',          true,  "bool"],
+	['tabRatio',                    600,    "int"],
+	['visibility',                  'visible']
 	//window{Height,Width}, {x,y}Window
 ];
 
@@ -28003,12 +28235,20 @@ function push_defaults_array(target, defaults) {
 	for(var j = 0; j != target.length; ++j) { var w = target[j];
 		for(var i=0; i != defaults.length; ++i) { var z = defaults[i];
 			if(w[z[0]] == null) w[z[0]] = z[1];
+			else switch(z[2]) {
+			case "bool": if(typeof w[z[0]] == "string") w[z[0]] = parsexmlbool(w[z[0]], z[0]); break;
+			case "int": if(typeof w[z[0]] == "string") w[z[0]] = parseInt(w[z[0]], 10); break;
+			}
 		}
 	}
 }
 function push_defaults(target, defaults) {
 	for(var i = 0; i != defaults.length; ++i) { var z = defaults[i];
 		if(target[z[0]] == null) target[z[0]] = z[1];
+		else switch(z[2]) {
+			case "bool": if(typeof target[z[0]] == "string") target[z[0]] = parsexmlbool(target[z[0]], z[0]); break;
+			case "int": if(typeof target[z[0]] == "string") target[z[0]] = parseInt(target[z[0]], 10); break;
+		}
 	}
 }
 
@@ -28020,6 +28260,13 @@ function parse_wb_defaults(wb) {
 	push_defaults_array(wb.Sheets, SheetDef);
 
 	_ssfopts.date1904 = parsexmlbool(wb.WBProps.date1904, 'date1904');
+}
+
+function safe1904(wb) {
+	/* TODO: store date1904 somewhere else */
+	if(!wb.Workbook) return "false";
+	if(!wb.Workbook.WBProps) return "false";
+	return parsexmlbool(wb.Workbook.WBProps.date1904) ? "true" : "false";
 }
 
 var badchars = "][*?\/\\".split("");
@@ -28072,8 +28319,17 @@ function parse_wb_xml(data, opts) {
 			case '<fileSharing': case '<fileSharing/>': break;
 
 			/* 18.2.28 workbookPr CT_WorkbookPr ? */
-			case '<workbookPr': delete y[0]; wb.WBProps = y; break;
-			case '<workbookPr/>': delete y[0]; wb.WBProps = y; break;
+			case '<workbookPr':
+			case '<workbookPr/>':
+				WBPropsDef.forEach(function(w) {
+					if(y[w[0]] == null) return;
+					switch(w[2]) {
+						case "bool": wb.WBProps[w[0]] = parsexmlbool(y[w[0]], w[0]); break;
+						case "int": wb.WBProps[w[0]] = parseInt(y[w[0]], 10); break;
+						default: wb.WBProps[w[0]] = y[w[0]];
+					}
+				});
+				break;
 			case '</workbookPr>': break;
 
 			/* 18.2.29 workbookProtection CT_WorkbookProtection ? */
@@ -28194,14 +28450,6 @@ var WB_XML_ROOT = writextag('workbook', null, {
 	'xmlns:r': XMLNS.r
 });
 
-function safe1904(wb) {
-	/* TODO: store date1904 somewhere else */
-	if(!wb.Workbook) return "false";
-	if(!wb.Workbook.WBProps) return "false";
-	// $FlowIgnore
-	return parsexmlbool(wb.Workbook.WBProps.date1904) ? "true" : "false";
-}
-
 function write_wb_xml(wb, opts) {
 	var o = [XML_HEADER];
 	o[o.length] = WB_XML_ROOT;
@@ -28211,7 +28459,16 @@ function write_wb_xml(wb, opts) {
 	/* fileVersion */
 	/* fileSharing */
 
-	o[o.length] = (writextag('workbookPr', null, {date1904:safe1904(wb), codeName:"ThisWorkbook"}));
+	var workbookPr = ({codeName:"ThisWorkbook"});
+	if(wb.Workbook && wb.Workbook.WBProps) {
+		if(wb.Workbook.WBProps.codeName) workbookPr.codeName = wb.Workbook.WBProps.codeName;
+		WBPropsDef.forEach(function(x) {
+if((wb.Workbook.WBProps[x[0]]) == null) return;
+			if((wb.Workbook.WBProps[x[0]]) == x[1]) return;
+			workbookPr[x[0]] = (wb.Workbook.WBProps[x[0]]);
+		});
+	}
+	o[o.length] = (writextag('workbookPr', null, workbookPr));
 
 	/* workbookProtection */
 	/* bookViews */
@@ -28279,14 +28536,36 @@ function write_BrtBundleSh(data, o) {
 
 /* [MS-XLSB] 2.4.807 BrtWbProp */
 function parse_BrtWbProp(data, length) {
-	data.read_shift(4);
-	var dwThemeVersion = data.read_shift(4);
+	var o = ({});
+	var flags = data.read_shift(4);
+	o.defaultThemeVersion = data.read_shift(4);
 	var strName = (length > 8) ? parse_XLWideString(data) : "";
-	return [dwThemeVersion, strName];
+	if(strName.length > 0) o.codeName = strName;
+	o.autoCompressPictures = !!(flags & 0x10000);
+	o.backupFile = !!(flags & 0x40);
+	o.checkCompatibility = !!(flags & 0x1000);
+	o.date1904 = !!(flags & 0x01);
+	o.filterPrivacy = !!(flags & 0x08);
+	o.hidePivotFieldList = !!(flags & 0x400);
+	o.promptedSolutions = !!(flags & 0x10);
+	o.publishItems = !!(flags & 0x800);
+	o.refreshAllConnections = !!(flags & 0x40000);
+	o.saveExternalLinkValues = !!(flags & 0x80);
+	o.showBorderUnselectedTables = !!(flags & 0x04);
+	o.showInkAnnotation = !!(flags & 0x20);
+	o.showObjects = ["all", "placeholders", "none"][(flags >> 13) & 0x03];
+	o.showPivotChartFilter = !!(flags & 0x8000);
+	o.updateLinks = ["userSet", "never", "always"][(flags >> 8) & 0x03];
+	return o;
 }
 function write_BrtWbProp(data, o) {
 	if(!o) o = new_buf(72);
-	o.write_shift(4, 0);
+	var flags = 0;
+	if(data) {
+		/* TODO: mirror parse_BrtWbProp fields */
+		if(data.filterPrivacy) flags |= 0x08;
+	}
+	o.write_shift(4, flags);
 	o.write_shift(4, 0);
 	write_XLSBCodeName("ThisWorkbook", o);
 	return o.slice(0, o.l);
@@ -28346,6 +28625,9 @@ function parse_wb_bin(data, opts) {
 				break;
 			case 0x040C: /* 'BrtNameExt' */ break;
 
+			case 0x0099: /* 'BrtWbProp' */
+				wb.WBProps = val; break;
+
 			/* case 'BrtModelTimeGroupingCalcCol' */
 			/* case 'BrtRevisionPtr' */
 			/* case 'BrtUid' */
@@ -28377,7 +28659,6 @@ function parse_wb_bin(data, opts) {
 			case 0x0822: /* 'BrtTimelineCachePivotCacheID' */
 			case 0x018D: /* 'BrtUserBookView' */
 			case 0x009A: /* 'BrtWbFactoid' */
-			case 0x0099: /* 'BrtWbProp' */
 			case 0x045D: /* 'BrtWbProp14' */
 			case 0x0229: /* 'BrtWebOpt' */
 			case 0x082B: /* 'BrtWorkBookPr15' */
@@ -28488,7 +28769,7 @@ function write_wb_bin(wb, opts) {
 	write_record(ba, "BrtBeginBook");
 	write_record(ba, "BrtFileVersion", write_BrtFileVersion());
 	/* [[BrtFileSharingIso] BrtFileSharing] */
-	write_record(ba, "BrtWbProp", write_BrtWbProp());
+	write_record(ba, "BrtWbProp", write_BrtWbProp(wb.Workbook && wb.Workbook.WBProps || null));
 	/* [ACABSPATH] */
 	/* [[BrtBookProtectionIso] BrtBookProtection] */
 	write_BOOKVIEWS(ba, wb, opts);
@@ -28662,7 +28943,7 @@ function safe_format_xlml(cell, nf, o) {
 		var z = XLMLFormatMap[nf]||nf||"General";
 		if(o.cellNF) cell.z = z;
 		if(o.cellDates && cell.t == 'n' && SSF.is_date(z)) {
-			var _d = SSF.parse_date_code(cell.v); if(_d) { cell.t = 'd'; cell.v = new Date(Date.UTC(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u)); }
+			var _d = SSF.parse_date_code(cell.v); if(_d) { cell.t = 'd'; cell.v = new Date(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u); }
 		}
 	} catch(e) { if(o.WTF) throw e; }
 }
@@ -28758,7 +29039,8 @@ function xlml_normalize(d) {
 /* UOS uses CJK in tags */
 var xlmlregex = /<(\/?)([^\s?>!\/:]*:|)([^\s?>]*[^\s?>\/])[^>]*>/mg;
 //var xlmlregex = /<(\/?)([a-z0-9]*:|)(\w+)[^>]*>/mg;
-function parse_xlml_xml(d, opts) {
+function parse_xlml_xml(d, _opts) {
+	var opts = _opts || {};
 	make_ssf(SSF);
 	var str = debom(xlml_normalize(d));
 	if(opts && opts.type == 'binary' && typeof cptable !== 'undefined') str = cptable.utils.decode(65001, char_codes(str));
@@ -28779,9 +29061,9 @@ function parse_xlml_xml(d, opts) {
 	var cstys = [], csty, seencol = false;
 	var arrayf = [];
 	var rowinfo = [], rowobj = {};
-	var Workbook = { Sheets:[] }, wsprops = {};
+	var Workbook = ({ Sheets:[], WBProps:{date1904:false} }), wsprops = {};
 	xlmlregex.lastIndex = 0;
-	str = str.replace(/<!--([^\u2603]*?)-->/mg,"");
+	str = str.replace(/<!--([\s\S]*?)-->/mg,"");
 	while((Rn = xlmlregex.exec(str))) switch(Rn[3]) {
 		case 'Data':
 			if(state[state.length-1][1]) break;
@@ -28843,7 +29125,7 @@ for(var cma = c; cma <= cc; ++cma) {
 				row = xlml_parsexmltag(Rn[0]);
 				if(row.Index) r = +row.Index - 1;
 				rowobj = {};
-				if(row.AutoFitHeight == "0") {
+				if(row.AutoFitHeight == "0" || row.Height) {
 					rowobj.hpx = parseInt(row.Height, 10); rowobj.hpt = px2pt(rowobj.hpx);
 					rowinfo[r] = rowobj;
 				}
@@ -29059,6 +29341,9 @@ Workbook.Names.push(_DefinedName);
 
 				/* ExcelWorkbook */
 				case 'ExcelWorkbook': switch(Rn[3]) {
+					case 'Date1904':
+Workbook.WBProps.date1904 = true;
+						break;
 					case 'WindowHeight': break;
 					case 'WindowWidth': break;
 					case 'WindowTopX': break;
@@ -29077,7 +29362,6 @@ Workbook.Names.push(_DefinedName);
 					case 'Dll': break;
 					case 'AcceptLabelsInFormulas': break;
 					case 'DoNotSaveLinkValues': break;
-					case 'Date1904': break;
 					case 'Iteration': break;
 					case 'MaxIterations': break;
 					case 'MaxChange': break;
@@ -29737,7 +30021,7 @@ function safe_format_xf(p, opts, date1904) {
 		}
 		else p.w = SSF.format(fmtid,p.v, {date1904:!!date1904});
 		if(opts.cellDates && fmtid && p.t == 'n' && SSF.is_date(SSF._table[fmtid])) {
-			var _d = SSF.parse_date_code(p.v); if(_d) { p.t = 'd'; p.v = new Date(Date.UTC(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u)); }
+			var _d = SSF.parse_date_code(p.v); if(_d) { p.t = 'd'; p.v = new Date(_d.y, _d.m-1,_d.d,_d.H,_d.M,_d.S,_d.u); }
 		}
 	} catch(e) { if(opts.WTF) throw e; }
 }
@@ -29767,7 +30051,7 @@ function parse_workbook(blob, options) {
 	var cell_valid = true;
 	var XFs = []; /* XF records */
 	var palette = [];
-	var Workbook = ({ Sheets:[] }), wsprops = {};
+	var Workbook = ({ Sheets:[], WBProps:{date1904:false} }), wsprops = {};
 	var get_rgb = function getrgb(icv) {
 		if(icv < 8) return XLSIcv[icv];
 		if(icv < 64) return palette[icv-8] || XLSIcv[icv];
@@ -29879,7 +30163,8 @@ function parse_workbook(blob, options) {
 			/* nested switch statements to workaround V8 128 limit */
 			switch(Rn) {
 				/* Workbook Options */
-				case 'Date1904': wb.opts.Date1904 = val; break;
+				case 'Date1904':
+wb.opts.Date1904 = Workbook.WBProps.date1904 = val; break;
 				case 'WriteProtect': wb.opts.WriteProtect = true; break;
 				case 'FilePass':
 					if(!opts.enc) blob.l = 0;
@@ -29938,7 +30223,7 @@ function parse_workbook(blob, options) {
 					supbooks.names.push(last_lbl);
 					if(!supbooks[0]) supbooks[0] = [];
 					supbooks[supbooks.length-1].push(val);
-					if(val.Name == "\r" && val.itab > 0)
+					if(val.Name == "_xlnm._FilterDatabase" && val.itab > 0)
 						if(val.rgce && val.rgce[0] && val.rgce[0][0] && val.rgce[0][0][0] == 'PtgArea3d')
 							FilterDatabases[val.itab - 1] = { ref: encode_range(val.rgce[0][0][1][2]) };
 					break;
@@ -31836,7 +32121,7 @@ function write_biff_ws(ba, ws, idx, opts, wb) {
 		for(var C = range.s.c; C <= range.e.c; ++C) {
 			if(R === range.s.r) cols[C] = encode_col(C);
 			ref = cols[C] + rr;
-			var cell = dense ? ws[R][C] : ws[ref];
+			var cell = dense ? (ws[R]||[])[C] : ws[ref];
 			if(!cell) continue;
 			/* write cell */
 			write_ws_biff_cell(ba, cell, R, C, opts);
@@ -31935,21 +32220,29 @@ var HTML_ = (function() {
 			if(RS > 1) sp.rowspan = RS;
 			if(CS > 1) sp.colspan = CS;
 			if(o.editable) sp.contenteditable = "true";
+			sp.id = "sjs-" + coord;
 			oo.push(writextag('td', w, sp));
 		}
-		return "<tr>" + oo.join("") + "</tr>";
+		var preamble = "<tr>";
+		return preamble + oo.join("") + "</tr>";
 	}
-	var _BEGIN = "<html><head><title>SheetJS Table Export</title></head><body><table>";
-	var _END = "</table></body></html>";
-	function sheet_to_html(ws, opts) {
-		var o = opts || {};
+	function make_html_preamble(ws, R, o) {
 		var out = [];
-		var r = decode_range(ws['!ref']);
-		o.dense = Array.isArray(ws);
-		for(var R = r.s.r; R <= r.e.r; ++R) out.push(make_html_row(ws, r, R, o));
+		return out.join("") + '<table>';
+	}
+	var _BEGIN = '<html><head><meta charset="utf-8"/><title>SheetJS Table Export</title></head><body>';
+	var _END = '</body></html>';
+	function sheet_to_html(ws, opts, wb) {
+		var o = opts || {};
 		var header = o.header != null ? o.header : _BEGIN;
 		var footer = o.footer != null ? o.footer : _END;
-		return header + out.join("") + footer ;
+		var out = [header];
+		var r = decode_range(ws['!ref']);
+		o.dense = Array.isArray(ws);
+		out.push(make_html_preamble(ws, r, o));
+		for(var R = r.s.r; R <= r.e.r; ++R) out.push(make_html_row(ws, r, R, o));
+		out.push("</table>" + footer);
+		return out.join("");
 	}
 
 	return {
@@ -31958,6 +32251,7 @@ var HTML_ = (function() {
 		_row: make_html_row,
 		BEGIN: _BEGIN,
 		END: _END,
+		_preamble: make_html_preamble,
 		from_sheet: sheet_to_html
 	};
 })();
@@ -32047,7 +32341,7 @@ var parse_content_xml = (function() {
 		var rept = 1, isstub = false;
 		var i = 0;
 		xlmlregex.lastIndex = 0;
-		str = str.replace(/<!--([^\u2603]*?)-->/mg,"").replace(/<!DOCTYPE[^\[]*\[[^\]]*\]>/gm,"");
+		str = str.replace(/<!--([\s\S]*?)-->/mg,"").replace(/<!DOCTYPE[^\[]*\[[^\]]*\]>/gm,"");
 		while((Rn = xlmlregex.exec(str))) switch((Rn[3]=Rn[3].replace(/_.*$/,""))) {
 
 			case 'table': case '工作表': // 9.1.2 <table:table>
@@ -32660,7 +32954,7 @@ function write_obj_str(factory) {
 		var idx = 0;
 		for(var i=0;i<wb.SheetNames.length;++i) if(wb.SheetNames[i] == o.sheet) idx=i;
 		if(idx == 0 && !!o.sheet && wb.SheetNames[0] != o.sheet) throw new Error("Sheet not found: " + o.sheet);
-		return factory.from_sheet(wb.Sheets[wb.SheetNames[idx]], o);
+		return factory.from_sheet(wb.Sheets[wb.SheetNames[idx]], o, wb);
 	};
 }
 
@@ -32774,7 +33068,7 @@ function parse_zip(zip, opts) {
 	}
 	if(dir.workbooks.length === 0) {
 		binname = "xl/workbook.bin";
-		if(!getzipfile(zip,binname,true)) throw new Error("Could not find workbook");
+		if(!getzipdata(zip,binname,true)) throw new Error("Could not find workbook");
 		dir.workbooks.push(binname);
 		xlsb = true;
 	}
@@ -33371,8 +33665,7 @@ function sheet_to_formulae(sheet) {
 	var y = "", x, val="";
 	if(sheet == null || sheet["!ref"] == null) return [];
 	var r = safe_decode_range(sheet['!ref']), rr = "", cols = [], C;
-	var cmds = new Array((r.e.r-r.s.r+1)*(r.e.c-r.s.c+1));
-	var i = 0;
+	var cmds = [];
 	var dense = Array.isArray(sheet);
 	for(C = r.s.c; C <= r.e.c; ++C) cols[C] = encode_col(C);
 	for(var R = r.s.r; R <= r.e.r; ++R) {
@@ -33396,10 +33689,9 @@ function sheet_to_formulae(sheet) {
 			else if(x.v === undefined) continue;
 			else if(x.t == 's') val = "'" + x.v;
 			else val = ""+x.v;
-			cmds[i++] = y + "=" + val;
+			cmds[cmds.length] = y + "=" + val;
 		}
 	}
-	cmds.length = i;
 	return cmds;
 }
 
@@ -33597,23 +33889,25 @@ if(has_buf && typeof require != 'undefined') (function() {
 		return stream;
 	};
 
-	var write_html_stream = function(sheet, opts) {
+	var write_html_stream = function(ws, opts) {
 		var stream = Readable();
 
-		var o = opts == null ? {} : opts;
-		var r = decode_range(sheet['!ref']), cell;
-		o.dense = Array.isArray(sheet);
-		stream.push(HTML_.BEGIN);
-
+		var o = opts || {};
+		var header = o.header != null ? o.header : HTML_.BEGIN;
+		var footer = o.footer != null ? o.footer : HTML_.END;
+		stream.push(header);
+		var r = decode_range(ws['!ref']);
+		o.dense = Array.isArray(ws);
+		stream.push(HTML_._preamble(ws, r, o));
 		var R = r.s.r;
 		var end = false;
 		stream._read = function() {
 			if(R > r.e.r) {
-				if(!end) { end = true; stream.push(HTML_.END); }
+				if(!end) { end = true; stream.push("</table>" + footer); }
 				return stream.push(null);
 			}
 			while(R <= r.e.r) {
-				stream.push(HTML_._row(sheet, r, R, o));
+				stream.push(HTML_._row(ws, r, R, o));
 				++R;
 				break;
 			}
@@ -33648,4 +33942,4 @@ var XLS = XLSX;
 var ODS = XLSX;
 
 }).call(this,require("km4Umf"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"./dist/cpexcel.js":20,"./jszip.js":21,"buffer":14,"crypto":13,"fs":13,"km4Umf":15,"stream":13}]},{},[10])
+},{"./dist/cpexcel.js":22,"./jszip.js":23,"buffer":16,"crypto":15,"fs":15,"km4Umf":17,"stream":15}]},{},[12])

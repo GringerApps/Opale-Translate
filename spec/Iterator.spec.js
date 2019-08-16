@@ -1,4 +1,4 @@
-describe("Iterator", () => {
+describe('Iterator', () => {
   const Iterator = require('../i18n.sketchplugin/Contents/Sketch/Iterator');
 
   let iterator;
@@ -15,20 +15,20 @@ describe("Iterator", () => {
     iterator = new Iterator([page, artboard, group]);
   });
 
-  describe(".length", () => {
-    it("should returns the length", () => {
+  describe('.length', () => {
+    it('should returns the length', () => {
       expect(iterator.length).toEqual(3);
     });
   });
 
-  describe(".count()", () => {
-    it("should returns the length", () => {
+  describe('.count()', () => {
+    it('should returns the length', () => {
       expect(iterator.count()).toEqual(3);
     });
   });
 
-  describe(".toArray()", () => {
-    it("should returns an array with only top level layers", () => {
+  describe('.toArray()', () => {
+    it('should returns an array with only top level layers', () => {
       const expectedResult = [page, artboard, group];
 
       const iteratedLayers = iterator.toArray();
@@ -36,7 +36,7 @@ describe("Iterator", () => {
       expect(iteratedLayers).toEqual(expectedResult);
     });
 
-    it("should returns an array with all layers with deep", () => {
+    it('should returns an array with all layers with deep', () => {
       const expectedResult = [page, textLayer, artboard, group];
 
       const iteratedLayers = iterator.toArray(true);
@@ -45,8 +45,8 @@ describe("Iterator", () => {
     });
   });
 
-  describe(".map()", () => {
-    it("should map only top level layers", () => {
+  describe('.map()', () => {
+    it('should map only top level layers', () => {
       const expectedResult = [false, true, false];
 
       const result = iterator.map((layer) => {
@@ -56,7 +56,7 @@ describe("Iterator", () => {
       expect(result).toEqual(expectedResult);
     });
 
-    it("should iterate all layers with deep", () => {
+    it('should iterate all layers with deep', () => {
       const expectedResult = [page, textLayer, artboard, group];
 
       const iteratedLayers = [];
@@ -68,8 +68,8 @@ describe("Iterator", () => {
     });
   });
 
-  describe(".forEach()", () => {
-    it("should iterate only on top level layers", () => {
+  describe('.forEach()', () => {
+    it('should iterate only on top level layers', () => {
       const expectedResult = [page, artboard, group];
 
       const iteratedLayers = [];
@@ -80,7 +80,7 @@ describe("Iterator", () => {
       expect(iteratedLayers).toEqual(expectedResult);
     });
 
-    it("should iterate all layers with deep", () => {
+    it('should iterate all layers with deep', () => {
       const expectedResult = [page, textLayer, artboard, group];
 
       const iteratedLayers = [];
@@ -92,8 +92,8 @@ describe("Iterator", () => {
     });
   });
 
-  describe(".filter()", () => {
-    it("should filter based on the predicate", () => {
+  describe('.filter()', () => {
+    it('should filter based on the predicate', () => {
       const expectedResult = [page];
 
       const iteratedLayers = iterator.filter((layer) => layer.isPage).toArray();
@@ -101,7 +101,7 @@ describe("Iterator", () => {
       expect(iteratedLayers).toEqual(expectedResult);
     });
 
-    it("should filter all layers with deep", () => {
+    it('should filter all layers with deep', () => {
       const expectedResult = [textLayer];
 
       const iteratedLayers = iterator.filter((layer) => layer.isText, true).toArray();

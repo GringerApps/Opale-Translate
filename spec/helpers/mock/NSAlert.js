@@ -15,7 +15,7 @@ NSAlert = class NSAlert {
   }
 
   static new() {
-      return this.alloc().init();
+    return this.alloc().init();
   }
 
   constructor() {
@@ -50,4 +50,4 @@ NSAlert = class NSAlert {
   runModal() {
     this._open = true;
   }
-}
+};

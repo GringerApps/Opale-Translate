@@ -1,5 +1,5 @@
-const XLSX = require("xlsx");
-const { TextEncoder } = require("text-encoding");
+const XLSX = require('xlsx');
+const { TextEncoder } = require('text-encoding');
 
 class I18nGoParser {
   get encoding() {
@@ -31,10 +31,10 @@ class ExcelParser {
   }
 
   parse(content) {
-    const result = {}
+    const result = {};
     for (let key in content) {
       const fileContent = String(content[key]);
-      const workbook = XLSX.read(fileContent, { type: "binary" });
+      const workbook = XLSX.read(fileContent, { type: 'binary' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
       const translations = XLSX.utils.sheet_to_json(sheet, { header: 1 });

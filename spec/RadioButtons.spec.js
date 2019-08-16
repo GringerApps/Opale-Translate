@@ -1,4 +1,4 @@
-describe("RadioButtons", function() {
+describe('RadioButtons', function() {
   const RadioButtons = require('../i18n.sketchplugin/Contents/Sketch/RadioButtons');
 
   beforeEach(() => {
@@ -6,18 +6,18 @@ describe("RadioButtons", function() {
     NSMatrix.reset();
   });
 
-  describe("new RadioButtons()", () => {
-    it("should creates a NSPopUpButton with pullsDown set to false", () => {
+  describe('new RadioButtons()', () => {
+    it('should creates a NSPopUpButton with pullsDown set to false', () => {
       const opts = [
         {
-          title: "test1",
+          title: 'test1',
           selected: true
         },
         {
-          title: "test2"
+          title: 'test2'
         },
         {
-          title: "test3"
+          title: 'test3'
         }
       ];
       const buttons = new RadioButtons(opts);
@@ -45,18 +45,18 @@ describe("RadioButtons", function() {
     });
   });
 
-  describe("addToWindow()", () => {
-    it("should creates a NSPopUpButton with pullsDown set to false", () => {
+  describe('addToWindow()', () => {
+    it('should creates a NSPopUpButton with pullsDown set to false', () => {
       const opts = [
         {
-          title: "test1",
+          title: 'test1',
           selected: true
         },
         {
-          title: "test2"
+          title: 'test2'
         },
         {
-          title: "test3"
+          title: 'test3'
         }
       ];
       const buttons = new RadioButtons(opts);
@@ -70,18 +70,18 @@ describe("RadioButtons", function() {
       expect(window._views).toEqual([matrix]);
     });
 
-    describe("when label is set", () => {
-      it("should creates a NSPopUpButton with pullsDown set to false", () => {
+    describe('when label is set', () => {
+      it('should creates a NSPopUpButton with pullsDown set to false', () => {
         const opts = [
           {
-            title: "test1",
+            title: 'test1',
             selected: true
           },
           {
-            title: "test2"
+            title: 'test2'
           },
           {
-            title: "test3"
+            title: 'test3'
           }
         ];
         const buttons = new RadioButtons(opts);
@@ -90,10 +90,10 @@ describe("RadioButtons", function() {
 
         const window = COSAlertWindow.instance();
 
-        buttons.addLabel("Matrix reloaded");
+        buttons.addLabel('Matrix reloaded');
         buttons.addToWindow(window);
 
-        expect(window._views).toEqual([new Label("Matrix reloaded"), matrix]);
+        expect(window._views).toEqual([new Label('Matrix reloaded'), matrix]);
       });
     });
   });

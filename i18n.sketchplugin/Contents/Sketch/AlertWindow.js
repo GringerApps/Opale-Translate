@@ -1,11 +1,11 @@
-const Window = require("./Window");
+const Window = require('./Window');
 
 class AlertWindow {
   constructor(title) {
     const window = COSAlertWindow.new();
 
     window.setMessageText(title);
-    window.addButtonWithTitle("OK");
+    window.addButtonWithTitle('OK');
 
     this.window = window;
   }

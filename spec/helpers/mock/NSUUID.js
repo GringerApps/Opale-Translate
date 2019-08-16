@@ -10,4 +10,4 @@ NSUUID = class NSUUID {
   UUIDString() {
     return this._uuid;
   }
-}
+};

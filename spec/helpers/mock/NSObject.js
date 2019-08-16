@@ -11,7 +11,7 @@ NSObject = class NSObject {
   }
 
   static reset() {
-    this._instance = new this();
+    this._instance = undefined;
   }
 
   constructor() {
@@ -20,6 +20,6 @@ NSObject = class NSObject {
 
   init() {
     this._init = true;
-    return this;    
+    return this;
   }
-}
+};

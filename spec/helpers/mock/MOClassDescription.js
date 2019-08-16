@@ -1,6 +1,6 @@
 const CLASS_REGISTRY = {};
 
-Mocha = function () {}
+Mocha = function () {};
 NSSelectorFromString = (s) => s;
 NSClassFromString = (s) => CLASS_REGISTRY[s];
 
@@ -21,4 +21,4 @@ MOClassDescription = class MOClassDescription {
   addInstanceMethodWithSelector_function_(selector, func) {
     this._class.prototype[selector] = func;
   }
-}
+};

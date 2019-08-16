@@ -1,4 +1,4 @@
-const { SCALE_FACTOR } = require("./consts");
+const { SCALE_FACTOR } = require('./consts');
 
 const scaleFrame = (frame) => {
   const origin = frame.origin;

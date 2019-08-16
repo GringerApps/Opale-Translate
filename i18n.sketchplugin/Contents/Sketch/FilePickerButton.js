@@ -1,77 +1,54 @@
-const FilePicker = require("./FilePicker");
-const Delegator = require("./Delegator");
+const FilePicker = require('./FilePicker');
+const Delegator = require('./Delegator');
+const View = require('./View');
+const Button = require('./Button');
+const TextField = require('./TextField');
 
-const DEFAULT_BUTTON_TITLE = "Select file";
+const DEFAULT_BUTTON_TITLE = 'Select file';
 
-class FilePickerButton {
+class FilePickerButton extends View {
   constructor(labelText, buttonTitle = DEFAULT_BUTTON_TITLE) {
+    super();
+
     const self = this;
-    const FILE_PICKER_DELEGATOR = new Delegator({
-      "callback": () => self._onClick()
-    });
-    const target = FILE_PICKER_DELEGATOR.getClassInstance();
-    const button = NSButton.buttonWithTitle_target_action_(buttonTitle, target, "callback");
-    button.setHighlighted(true);
+    this._button = new Button(buttonTitle);
+    this._button.onClick(() => self._onClick());
+    this._button.setHighlighted(true);
 
-    const labelFrame = NSMakeRect(0, 0, 180, 20);
-    const label = NSTextField.alloc().initWithFrame(labelFrame);
-    label.setDrawsBackground(false);
-    label.setEditable(false);
-    label.setBezeled(false);
-    label.setSelectable(true);
-    label.setStringValue(labelText);
+    this._label = new TextField(labelText);
 
-    this._label = label;
-    this._button = button;
+    this._filePicker = new FilePicker();
+
     this._onFileSelected = () => {};
+
+    this.addSubview(this._label);
+    this.addSubview(this._button);
+
+    const constraintMapping = {
+      button: this._button,
+      label: this._label
+    };
+    this.addVisualConstraint('H:|-0-[label]-[button]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[label]->=0-|', constraintMapping);
+    this.addVisualConstraint('V:|->=0-[button]->=0-|', constraintMapping);
   }
 
   _onClick() {
-    const picker = new FilePicker();
+    const picker = this._filePicker;
     picker.show();
-    const files = picker.files();
-    this._button.setTitle("Replace file");
-    this._button.setFrameSize(NSMakeSize(200, this._button.frame().size.height));
-    this._label.setStringValue('Spreadsheet: ' + filename);
-    this._onFileSelected(files);
+    if(picker.choseFiles()) {
+      const files = picker.files();
+      this._button.setTitle('Replace file');
+      this._onFileSelected(files);
+    }
   }
 
   setLabel(label) {
-    this._label.setStringValue(label);
+    this._label.setText(label);
   }
 
   onFileSelected(callback) {
     this._onFileSelected = callback;
-  }
-
-  addToWindow(window) {
-    const view = NSView.alloc().initWithFrame(NSMakeRect(0, 0, 400, 30));
-    const button = this._button;
-    const label = this._label;
-
-    const viewFrame = view.frame();
-    const buttonFrame = button.frame();
-    const labelFrame = button.frame();
-
-    const buttonOrigin = NSMakePoint(
-      labelFrame.origin.x + labelFrame.size.width,
-      (NSHeight(viewFrame) - NSHeight(buttonFrame)) / 2
-    );
-    button.setFrameOrigin(buttonOrigin);
-    button.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-
-    const labelOrigin = NSMakePoint(
-      labelFrame.origin.x,
-      (NSHeight(viewFrame) - NSHeight(labelFrame)) / 2
-    );
-    label.setFrameOrigin(labelOrigin);
-    label.setAutoresizingMask(NSViewMinYMargin | NSViewMaxYMargin);
-
-    view.addSubview(label);
-    view.addSubview(button);
-
-    window.addAccessoryView(view);
   }
 }
 

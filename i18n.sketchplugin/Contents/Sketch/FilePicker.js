@@ -10,12 +10,14 @@ class FilePicker {
   }
 
   show() {
-    this.modalResult = this.panel.runModal();
-  };
+    const result = this.panel.runModal();
+    this.modalResult = result;
+    return result == NSFileHandlingPanelOKButton;
+  }
 
   choseFiles() {
     return this.modalResult == NSFileHandlingPanelOKButton && this.panel.filenames().length != 0;
-  };
+  }
 
   files() {
     return this.panel.filenames();

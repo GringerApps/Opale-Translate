@@ -3,6 +3,6 @@ NSPoint = class NSPoint {
     this.x = x;
     this.y = y;
   }
-}
+};
 
 NSMakePoint = (x, y) => new NSPoint(x, y);

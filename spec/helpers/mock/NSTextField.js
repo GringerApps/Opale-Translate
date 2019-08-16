@@ -1,4 +1,4 @@
-require("./NSView");
+require('./NSView');
 
 NSTextField = class NSTextField extends NSView {
   setDrawsBackground(drawsBackground) {
@@ -30,4 +30,4 @@ NSTextField = class NSTextField extends NSView {
     this._alignment = alignment;
     return this;
   }
-}
+};

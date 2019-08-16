@@ -1,16 +1,16 @@
- const { scaleFrame } = require("./viewhelper");
+const { scaleFrame } = require('./viewhelper');
 
- class Window {
-   constructor() {
-     const x = 0, y = 0, w = 500, h = 300;
-     this._views = []
-     this._frame = NSMakeRect(x, y, w, h);
-     this._alert = NSAlert.new();
-	}
+class Window {
+  constructor() {
+    const x = 0, y = 0, w = 500, h = 300;
+    this._views = [];
+    this._frame = NSMakeRect(x, y, w, h);
+    this._alert = NSAlert.new();
+  }
 
   _layout() {
     if (!this._views) {
-        return;
+      return;
     }
 
     let height = 0;

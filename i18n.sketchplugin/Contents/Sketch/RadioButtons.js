@@ -30,11 +30,11 @@ class RadioButtons {
     }
 
     this.label = null;
-    this.buttonMatrix = buttonMatrix
+    this.buttonMatrix = buttonMatrix;
   }
 
   addLabel(label) {
-    this.label = label
+    this.label = label;
   }
 
   addToWindow(window) {

@@ -12,7 +12,7 @@ class ArrayWrapper {
       callback(this.array[i]);
     }
   }
-};
+}
 
 class Iterator {
   constructor(list) {
@@ -73,7 +73,7 @@ class Iterator {
     const result = [];
     this.iterate((layer) => {
       result.push(layer);
-    }, deep)
+    }, deep);
     return result;
   }
 

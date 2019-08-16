@@ -1,4 +1,4 @@
-require("./NSView");
+require('./NSView');
 
 NSPopUpButton = class NSPopUpButton extends NSView {
   static alloc() {
@@ -17,7 +17,7 @@ NSPopUpButton = class NSPopUpButton extends NSView {
   }
 
   constructor(){
-    super()
+    super();
     this._frame = null;
     this._pullsDown = false;
     this._items = [];
@@ -61,4 +61,4 @@ NSPopUpButton = class NSPopUpButton extends NSView {
     this._target = target;
     return this;
   }
-}
+};

@@ -9,6 +9,7 @@
   "commands" : [
     {
       "name": "Translate",
+      "shortcut": "ctrl shift t",
       "identifier": "translate",
       "script": "build/plugin.js",
       "handler": "translate"

@@ -44,4 +44,4 @@ NSMatrix = class NSMatrix {
   selectCellAtRow_column(row, col) {
     return this._cells[row * this._numberOfColumns + col].setSelected(true);
   }
-}
+};

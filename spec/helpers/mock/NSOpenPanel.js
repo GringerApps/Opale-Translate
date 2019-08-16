@@ -1,20 +1,12 @@
-NSOpenPanel = class NSOpenPanel {
+require('./NSObject');
+
+NSOpenPanel = class NSOpenPanel extends NSObject {
   static openPanel() {
     return this.instance();
   }
 
-  static instance() {
-    if (this._instance === undefined) {
-      this._instance = new NSOpenPanel();
-    }
-    return this._instance;
-  }
-
-  static reset() {
-    this._instance = new NSOpenPanel();
-  }
-
   constructor() {
+    super();
     this._filenames = [];
     this._result = NSFileHandlingPanelCancelButton;
     this._open = false;
@@ -29,7 +21,7 @@ NSOpenPanel = class NSOpenPanel {
 
   runModal() {
     this._open = true;
-    return this._result
+    return this._result;
   }
 
   setCanChooseFiles(value) {
@@ -43,4 +35,4 @@ NSOpenPanel = class NSOpenPanel {
   setAllowsMultipleSelection(value) {
     this._allowsMultipleSelection = value;
   }
-}
+};

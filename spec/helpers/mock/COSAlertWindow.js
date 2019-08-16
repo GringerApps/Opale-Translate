@@ -2,13 +2,13 @@ Label = class Label {
   constructor(label) {
     this.label = label;
   }
-}
+};
 
 Button = class Button {
   constructor(title) {
     this.title = title;
   }
-}
+};
 
 COSAlertWindow = class COSAlertWindow {
   static new() {
@@ -57,4 +57,4 @@ COSAlertWindow = class COSAlertWindow {
     this._open = true;
     return this._result;
   }
-}
+};
