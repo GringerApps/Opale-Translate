@@ -4,8 +4,8 @@ i18n plugin for Sketch. Enables you to translate your artboards using json or Ex
 It acts in a non-destructive way so you can easily undo your changes later.
 
 ## Installation
-1. Download the repository from this [link](https://github.com/kristof/sketch-i18n/archive/master.zip).
-2. Grab the `Sketch i18n` folder from the ZIP.
+1. Download the repository via `Clone or download` button above
+2. Grab the `	i18n.sketchplugin` folder from the ZIP.
 3. In Sketch 3, select `Plugins > Reveal Plugins Folder...` from the menu bar, and put the `Sketch i18n` folder in this folder.
 
 ## Usage
